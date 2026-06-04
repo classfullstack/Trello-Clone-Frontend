@@ -1,22 +1,24 @@
 import { useState } from 'react';
-import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import {
-  useAuth, Avatar, Dropdown, MenuItem, MenuDivider, IconButton,
+  useAuth, Avatar, Dropdown, MenuItem, MenuDivider, IconButton, ThemeToggle,
   color, space, font, radius, shadow,
 } from '@trello/ui';
 import {
-  IconDashboard, IconUsers, IconWorkspaces, IconAudit,
-  IconLogout, IconShield, IconMenu, IconSearch,
-} from './icons';
+  LayoutDashboard, Users, KanbanSquare, ScrollText,
+  LogOut, Shield, Menu, Search, User, Settings,
+} from 'lucide-react';
 
 const NAV = [
-  { to: '/dashboard', label: 'Dashboard', Icon: IconDashboard },
-  { to: '/users', label: 'Users', Icon: IconUsers },
-  { to: '/workspaces', label: 'Workspaces', Icon: IconWorkspaces },
-  { to: '/audit', label: 'Audit Log', Icon: IconAudit },
+  { to: '/dashboard', label: 'Dashboard', Icon: LayoutDashboard },
+  { to: '/users', label: 'Users', Icon: Users },
+  { to: '/workspaces', label: 'Workspaces', Icon: KanbanSquare },
+  { to: '/audit', label: 'Audit Log', Icon: ScrollText },
 ];
 
 const SIDEBAR_W = 248;
+// Fixed dark sidebar in both themes (admin chrome stays dark).
+const SIDEBAR_BG = '#0B1626';
 
 function SidebarContent({ onNavigate }) {
   return (
@@ -28,11 +30,11 @@ function SidebarContent({ onNavigate }) {
         <span style={{
           width: 32, height: 32, borderRadius: radius.large, flexShrink: 0,
           background: color.blue, display: 'inline-flex', alignItems: 'center',
-          justifyContent: 'center', color: color.white,
+          justifyContent: 'center', color: '#FFFFFF',
         }}>
-          <IconShield size={18} />
+          <Shield size={18} />
         </span>
-        <span style={{ fontFamily: font.display, fontSize: 18, fontWeight: 700, color: color.white }}>
+        <span style={{ fontFamily: font.display, fontSize: 18, fontWeight: 700, color: '#FFFFFF' }}>
           Trello Admin
         </span>
       </div>
@@ -45,7 +47,7 @@ function SidebarContent({ onNavigate }) {
             style={({ isActive }) => ({
               display: 'flex', alignItems: 'center', gap: space.md,
               padding: '10px 12px', borderRadius: radius.large, textDecoration: 'none',
-              color: isActive ? color.white : 'rgba(255,255,255,0.72)',
+              color: isActive ? '#FFFFFF' : 'rgba(255,255,255,0.72)',
               background: isActive ? 'rgba(24,104,219,0.95)' : 'transparent',
               fontSize: 14.5, fontWeight: isActive ? 600 : 500,
               transition: 'background .12s, color .12s',
@@ -83,13 +85,13 @@ export function Layout({ children }) {
   };
 
   const sidebarStyle = {
-    width: SIDEBAR_W, background: color.navyDeep, color: color.white,
+    width: SIDEBAR_W, background: SIDEBAR_BG, color: '#FFFFFF',
     display: 'flex', flexDirection: 'column', boxSizing: 'border-box',
     flexShrink: 0,
   };
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', fontFamily: font.text, background: color.offWhite }}>
+    <div style={{ display: 'flex', minHeight: '100vh', fontFamily: font.text, background: color.surfaceAlt }}>
       {/* Desktop sidebar (fixed) */}
       <aside className="admin-sidebar" style={{
         ...sidebarStyle, position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 40,
@@ -111,38 +113,44 @@ export function Layout({ children }) {
 
       <div className="admin-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, marginLeft: SIDEBAR_W }}>
         <header style={{
-          height: 60, background: color.white, borderBottom: `1px solid ${color.border}`,
+          height: 60, background: color.surface, borderBottom: `1px solid ${color.border}`,
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           gap: space.base, padding: `0 ${space.lg}`, position: 'sticky', top: 0, zIndex: 30,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: space.sm }}>
             <span className="admin-menu-btn" style={{ display: 'none' }}>
-              <IconButton label="Open menu" onClick={() => setMobileOpen(true)}><IconMenu size={20} /></IconButton>
+              <IconButton label="Open menu" onClick={() => setMobileOpen(true)}><Menu size={20} /></IconButton>
             </span>
           </div>
 
-          <Dropdown align="right" width={240} trigger={
-            <button type="button" style={{
-              display: 'flex', alignItems: 'center', gap: space.sm, cursor: 'pointer',
-              background: 'transparent', border: 'none', padding: '4px 6px', borderRadius: radius.large,
-            }}>
-              <Avatar name={user?.name} email={user?.email} size={32} />
-              <span className="admin-email" style={{ color: color.navyMedium, fontSize: 14, fontWeight: 500 }}>
-                {user?.email}
-              </span>
-            </button>
-          }>
-            <div style={{ padding: '8px 12px 6px' }}>
-              <div style={{ fontSize: 14, fontWeight: 600, color: color.navyDeep, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {user?.name || 'Administrator'}
+          <div style={{ display: 'flex', alignItems: 'center', gap: space.sm }}>
+            <ThemeToggle />
+            <Dropdown align="right" width={240} trigger={
+              <button type="button" style={{
+                display: 'flex', alignItems: 'center', gap: space.sm, cursor: 'pointer',
+                background: 'transparent', border: 'none', padding: '4px 6px', borderRadius: radius.large,
+              }}>
+                <Avatar name={user?.name} email={user?.email} src={user?.avatarUrl} size={32} />
+                <span className="admin-email" style={{ color: color.text, fontSize: 14, fontWeight: 500 }}>
+                  {user?.email}
+                </span>
+              </button>
+            }>
+              <div style={{ padding: '8px 12px 6px' }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: color.text, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {user?.name || 'Administrator'}
+                </div>
+                <div style={{ fontSize: 12, color: color.textMuted, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {user?.email}
+                </div>
               </div>
-              <div style={{ fontSize: 12, color: color.navyLight, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {user?.email}
-              </div>
-            </div>
-            <MenuDivider />
-            <MenuItem icon={<IconLogout size={16} />} danger onClick={onLogout}>Sign out</MenuItem>
-          </Dropdown>
+              <MenuDivider />
+              <MenuItem icon={<User size={16} />} onClick={() => navigate('/profile')}>Profile</MenuItem>
+              <MenuItem icon={<Settings size={16} />} onClick={() => navigate('/settings')}>Settings</MenuItem>
+              <MenuDivider />
+              <MenuItem icon={<LogOut size={16} />} danger onClick={onLogout}>Sign out</MenuItem>
+            </Dropdown>
+          </div>
         </header>
 
         <main style={{ flex: 1, padding: space.xl, overflow: 'auto', maxWidth: 1280, width: '100%', boxSizing: 'border-box' }}>
@@ -166,19 +174,19 @@ export function PageHeader({ title, subtitle, breadcrumb, action }) {
   return (
     <div style={{ marginBottom: space.lg }}>
       {breadcrumb && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: color.navyLight, marginBottom: space.sm }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: color.textMuted, marginBottom: space.sm }}>
           {breadcrumb.map((b, i) => (
             <span key={b} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
               {i > 0 && <span style={{ color: color.mediumGray }}>/</span>}
-              <span style={{ color: i === breadcrumb.length - 1 ? color.navyMedium : color.navyLight, fontWeight: i === breadcrumb.length - 1 ? 600 : 400 }}>{b}</span>
+              <span style={{ color: i === breadcrumb.length - 1 ? color.text : color.textMuted, fontWeight: i === breadcrumb.length - 1 ? 600 : 400 }}>{b}</span>
             </span>
           ))}
         </div>
       )}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: space.base, flexWrap: 'wrap' }}>
         <div>
-          <h1 style={{ fontFamily: font.display, fontSize: 26, fontWeight: 700, color: color.navyDeep, margin: 0 }}>{title}</h1>
-          {subtitle && <p style={{ color: color.navyLight, margin: `6px 0 0`, fontSize: 14 }}>{subtitle}</p>}
+          <h1 style={{ fontFamily: font.display, fontSize: 26, fontWeight: 700, color: color.text, margin: 0 }}>{title}</h1>
+          {subtitle && <p style={{ color: color.textMuted, margin: `6px 0 0`, fontSize: 14 }}>{subtitle}</p>}
         </div>
         {action}
       </div>
@@ -197,7 +205,7 @@ export function SearchInput({ value, onChange, placeholder = 'Search…', width 
         position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
         color: color.mediumGray, display: 'inline-flex', pointerEvents: 'none',
       }}>
-        <IconSearch size={16} />
+        <Search size={16} />
       </span>
       <input
         value={value}
@@ -208,8 +216,8 @@ export function SearchInput({ value, onChange, placeholder = 'Search…', width 
         style={{
           fontFamily: font.text, fontSize: 14, minHeight: 40, width: '100%',
           padding: '8px 12px 8px 36px', borderRadius: radius.primary, boxSizing: 'border-box',
-          border: `1px solid ${focused ? color.blue : color.border}`, color: color.navyDeep,
-          background: color.white, outline: 'none',
+          border: `1px solid ${focused ? color.blue : color.border}`, color: color.text,
+          background: color.surface, outline: 'none',
           boxShadow: focused ? '0px 0px 0px 3px rgba(24, 104, 219, 0.15)' : 'none',
           transition: 'border-color .12s, box-shadow .12s',
         }}

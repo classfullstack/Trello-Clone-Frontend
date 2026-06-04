@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth, Button, Input, useToast, color, space, font, radius } from '@trello/ui';
-import { IconShield } from '../components/icons';
+import { Shield } from 'lucide-react';
 
 export function LoginPage() {
   const { login } = useAuth();
@@ -40,7 +40,7 @@ export function LoginPage() {
   return (
     <div style={{
       minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: `radial-gradient(1200px 600px at 50% -10%, #14346b 0%, ${color.navyDeep} 60%)`,
+      background: 'radial-gradient(1200px 600px at 50% -10%, #14346b 0%, #091E42 60%)',
       fontFamily: font.text, padding: space.lg, boxSizing: 'border-box',
     }}>
       <div style={{ width: '100%', maxWidth: 400 }}>
@@ -48,23 +48,23 @@ export function LoginPage() {
           <span style={{
             width: 48, height: 48, borderRadius: radius.large,
             background: color.blue, display: 'inline-flex', alignItems: 'center',
-            justifyContent: 'center', color: color.white, boxShadow: '0 8px 24px rgba(24,104,219,0.4)',
+            justifyContent: 'center', color: '#FFFFFF', boxShadow: '0 8px 24px rgba(24,104,219,0.4)',
           }}>
-            <IconShield size={26} />
+            <Shield size={26} />
           </span>
-          <span style={{ fontFamily: font.display, fontSize: 22, fontWeight: 700, color: color.white }}>
+          <span style={{ fontFamily: font.display, fontSize: 22, fontWeight: 700, color: '#FFFFFF' }}>
             Trello Admin
           </span>
         </div>
 
         <div style={{
-          background: color.white, borderRadius: radius.large, padding: space.xl,
+          background: color.surface, borderRadius: radius.large, padding: space.xl,
           boxShadow: 'rgba(9, 30, 66, 0.31) 0px 12px 32px 0px',
         }}>
-          <h1 style={{ fontFamily: font.display, fontSize: 22, fontWeight: 700, color: color.navyDeep, marginTop: 0, marginBottom: 4 }}>
+          <h1 style={{ fontFamily: font.display, fontSize: 22, fontWeight: 700, color: color.text, marginTop: 0, marginBottom: 4 }}>
             Sign in
           </h1>
-          <p style={{ color: color.navyLight, fontSize: 14, marginTop: 0, marginBottom: space.lg }}>
+          <p style={{ color: color.textMuted, fontSize: 14, marginTop: 0, marginBottom: space.lg }}>
             Restricted to system administrators.
           </p>
           <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: space.base }} noValidate>

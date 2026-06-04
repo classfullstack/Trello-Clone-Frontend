@@ -1,16 +1,27 @@
+import { useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { useAuth, Spinner } from '@trello/ui';
+import { useAuth, useTheme, Spinner, color } from '@trello/ui';
+import { useQuery } from '@tanstack/react-query';
+import { api } from './lib/api';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Workspaces } from './pages/Workspaces';
 import { WorkspaceBoards } from './pages/WorkspaceBoards';
 import { BoardView } from './pages/BoardView';
+import { Profile } from './pages/Profile';
+import { Settings } from './pages/Settings';
 import { NavBar } from './components/NavBar';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
   const location = useLocation();
-  if (loading) return <Spinner />;
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+        <Spinner size={28} />
+      </div>
+    );
+  }
   if (!user) return <Navigate to="/login" replace state={{ from: location }} />;
   return <>{children}</>;
 }
@@ -24,24 +35,39 @@ function Shell({ children }) {
   );
 }
 
+// Load persisted theme from backend settings on login and apply it.
+function ThemeSync() {
+  const { user } = useAuth();
+  const { setTheme } = useTheme();
+  const { data } = useQuery({
+    queryKey: ['me', 'settings'],
+    queryFn: async () => (await api.get('/me/settings')).data ?? {},
+    enabled: !!user,
+  });
+  useEffect(() => {
+    const t = data?.theme;
+    if (t === 'light' || t === 'dark' || t === 'system') setTheme(t);
+  }, [data, setTheme]);
+  return null;
+}
+
 export function App() {
+  const { user } = useAuth();
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route
-        path="/"
-        element={<ProtectedRoute><Shell><Workspaces /></Shell></ProtectedRoute>}
-      />
-      <Route
-        path="/w/:workspaceId"
-        element={<ProtectedRoute><Shell><WorkspaceBoards /></Shell></ProtectedRoute>}
-      />
-      <Route
-        path="/b/:boardId"
-        element={<ProtectedRoute><Shell><BoardView /></Shell></ProtectedRoute>}
-      />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <>
+      {user && <ThemeSync />}
+      <div style={{ minHeight: '100%', background: color.surfaceAlt }}>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/" element={<ProtectedRoute><Shell><Workspaces /></Shell></ProtectedRoute>} />
+          <Route path="/w/:workspaceId" element={<ProtectedRoute><Shell><WorkspaceBoards /></Shell></ProtectedRoute>} />
+          <Route path="/b/:boardId" element={<ProtectedRoute><Shell><BoardView /></Shell></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><Shell><Profile /></Shell></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><Shell><Settings /></Shell></ProtectedRoute>} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </div>
+    </>
   );
 }

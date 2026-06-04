@@ -1,7 +1,10 @@
 import {
-  createContext, useContext, useState, useRef, useEffect, useCallback, useId,
+  createContext, useContext, useState, useRef, useEffect, useCallback, useMemo, useId,
 } from 'react';
 import { createPortal } from 'react-dom';
+import {
+  X, Check, Info, AlertTriangle, AlertCircle,
+} from 'lucide-react';
 import { color, space, radius, shadow, font, focusRing } from './tokens';
 
 /* ------------------------------------------------------------------ Spinner */
@@ -26,7 +29,7 @@ export function Skeleton({ width = '100%', height = 16, radius: r = radius.base,
       aria-hidden
       style={{
         display: 'block', width, height, borderRadius: r,
-        background: 'linear-gradient(90deg, #ECEDF0 25%, #F4F5F7 37%, #ECEDF0 63%)',
+        background: `linear-gradient(90deg, ${color.surfaceAlt} 25%, ${color.lightGray} 37%, ${color.surfaceAlt} 63%)`,
         backgroundSize: '400% 100%', animation: 'trello-shimmer 1.4s ease infinite', ...style,
       }}
     />
@@ -42,19 +45,19 @@ const btnVariants = {
     active: { background: color.blueDark },
   },
   secondary: {
-    base: { background: color.white, color: color.navyMedium, border: `1px solid ${color.border}` },
-    hover: { background: color.offWhite },
+    base: { background: color.surface, color: color.text, border: `1px solid ${color.border}` },
+    hover: { background: color.surfaceAlt },
     active: { background: color.lightGray },
   },
   ghost: {
-    base: { background: 'transparent', color: color.navyMedium, border: '1px solid transparent' },
-    hover: { background: color.offWhite },
+    base: { background: 'transparent', color: color.text, border: '1px solid transparent' },
+    hover: { background: color.surfaceAlt },
     active: { background: color.lightGray },
   },
   subtle: {
-    base: { background: 'rgba(9,30,66,0.06)', color: color.navyMedium, border: '1px solid transparent' },
-    hover: { background: 'rgba(9,30,66,0.10)' },
-    active: { background: 'rgba(9,30,66,0.16)' },
+    base: { background: color.surfaceAlt, color: color.text, border: '1px solid transparent' },
+    hover: { background: color.lightGray },
+    active: { background: color.lightGray },
   },
   danger: {
     base: { background: color.danger, color: color.white, border: '1px solid transparent' },
@@ -122,8 +125,8 @@ export function IconButton({ label, size = 32, active = false, style, children, 
       style={{
         width: size, height: size, display: 'inline-flex', alignItems: 'center',
         justifyContent: 'center', border: 'none', borderRadius: radius.base, cursor: 'pointer',
-        background: active ? color.lightGray : hover ? color.offWhite : 'transparent',
-        color: color.navyMedium, transition: 'background .12s', ...style,
+        background: active ? color.lightGray : hover ? color.surfaceAlt : 'transparent',
+        color: color.text, transition: 'background .12s', ...style,
       }}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
@@ -156,8 +159,8 @@ export function Input({ label, error, helper, id, style, wrapStyle, ...rest }) {
         style={{
           fontFamily: font.text, fontSize: 14, lineHeight: '24px', minHeight: 40,
           padding: '8px 12px', borderRadius: radius.primary,
-          border: `1px solid ${borderColor}`, color: color.navyDeep,
-          background: error ? color.errorBg : color.white,
+          border: `1px solid ${borderColor}`, color: color.text,
+          background: error ? color.errorBg : color.surface,
           outline: 'none', width: '100%', boxSizing: 'border-box',
           boxShadow: focused ? focusRing : 'none', transition: 'border-color .12s, box-shadow .12s',
           ...style,
@@ -193,8 +196,8 @@ export function Textarea({ label, error, helper, id, style, wrapStyle, ...rest }
         style={{
           fontFamily: font.text, fontSize: 14, lineHeight: '21px', minHeight: 80,
           padding: '8px 12px', borderRadius: radius.primary,
-          border: `1px solid ${borderColor}`, color: color.navyDeep,
-          background: color.white, outline: 'none', width: '100%', boxSizing: 'border-box',
+          border: `1px solid ${borderColor}`, color: color.text,
+          background: color.surface, outline: 'none', width: '100%', boxSizing: 'border-box',
           resize: 'vertical', boxShadow: focused ? focusRing : 'none',
           transition: 'border-color .12s, box-shadow .12s', ...style,
         }}
@@ -225,7 +228,7 @@ export function Select({ label, error, id, style, wrapStyle, children, ...rest }
         style={{
           fontFamily: font.text, fontSize: 14, minHeight: 40, padding: '8px 12px',
           borderRadius: radius.primary, border: `1px solid ${borderColor}`,
-          color: color.navyDeep, background: color.white, outline: 'none', width: '100%',
+          color: color.text, background: color.surface, outline: 'none', width: '100%',
           boxSizing: 'border-box', cursor: 'pointer', boxShadow: focused ? focusRing : 'none', ...style,
         }}
         onFocus={() => setFocused(true)}
@@ -245,9 +248,9 @@ export function Card({ children, hoverable = false, style, ...rest }) {
   return (
     <div
       style={{
-        background: color.white, border: `1px solid ${color.border}`, borderRadius: radius.large,
+        background: color.surface, border: `1px solid ${color.border}`, borderRadius: radius.large,
         padding: space.lg, boxShadow: hover && hoverable ? shadow.hover : shadow.subtle,
-        color: color.navyDeep, transition: 'box-shadow .15s, transform .15s',
+        color: color.text, transition: 'box-shadow .15s, transform .15s',
         transform: hover && hoverable ? 'translateY(-2px)' : 'none', ...style,
       }}
       onMouseEnter={() => setHover(true)}
@@ -263,8 +266,8 @@ export function Card({ children, hoverable = false, style, ...rest }) {
 
 export function Badge({ kind = 'default', children, style }) {
   const kinds = {
-    default: { background: color.offWhite, color: color.navyDeep, border: `1px solid ${color.lightGray}` },
-    success: { background: '#E8F5E9', color: color.success, border: `1px solid ${color.success}` },
+    default: { background: color.surfaceAlt, color: color.text, border: `1px solid ${color.lightGray}` },
+    success: { background: color.successBg, color: color.success, border: `1px solid ${color.success}` },
     error: { background: color.errorBg, color: color.danger, border: `1px solid ${color.danger}` },
     primary: { background: color.primaryBadgeBg, color: color.blue, border: `1px solid ${color.blue}` },
   };
@@ -361,7 +364,7 @@ export function Modal({ open, onClose, title, size = 'md', width, footer, header
         aria-modal="true"
         aria-label={typeof title === 'string' ? title : undefined}
         style={{
-          background: color.white, borderRadius: radius.large, boxShadow: shadow.modal,
+          background: color.surface, borderRadius: radius.large, boxShadow: shadow.modal,
           maxWidth, width: '100%', marginTop: '6vh', marginBottom: '6vh',
           animation: 'trello-pop .14s ease', display: 'flex', flexDirection: 'column',
         }}
@@ -369,14 +372,14 @@ export function Modal({ open, onClose, title, size = 'md', width, footer, header
         {(title || headerExtra) && (
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: space.md,
-            padding: `${space.lg} ${space.lg} ${space.base}`, borderBottom: `1px solid ${color.offWhite}`,
+            padding: `${space.lg} ${space.lg} ${space.base}`, borderBottom: `1px solid ${color.border}`,
           }}>
-            <h2 style={{ fontFamily: font.display, fontSize: 20, fontWeight: 600, color: color.navyDeep, margin: 0 }}>
+            <h2 style={{ fontFamily: font.display, fontSize: 20, fontWeight: 600, color: color.text, margin: 0 }}>
               {title}
             </h2>
             <div style={{ display: 'flex', alignItems: 'center', gap: space.sm }}>
               {headerExtra}
-              <IconButton label="Close" onClick={onClose}>✕</IconButton>
+              <IconButton label="Close" onClick={onClose}><X size={18} /></IconButton>
             </div>
           </div>
         )}
@@ -384,7 +387,7 @@ export function Modal({ open, onClose, title, size = 'md', width, footer, header
         {footer && (
           <div style={{
             display: 'flex', justifyContent: 'flex-end', gap: space.sm,
-            padding: space.lg, borderTop: `1px solid ${color.offWhite}`,
+            padding: space.lg, borderTop: `1px solid ${color.border}`,
           }}>{footer}</div>
         )}
       </div>
@@ -416,7 +419,7 @@ export function Dropdown({ trigger, children, align = 'left', width = 220 }) {
           role="menu"
           style={{
             position: 'absolute', top: 'calc(100% + 6px)', [align]: 0, width, zIndex: 200,
-            background: color.white, border: `1px solid ${color.border}`, borderRadius: radius.large,
+            background: color.surface, border: `1px solid ${color.border}`, borderRadius: radius.large,
             boxShadow: shadow.dropdown, padding: space.xs, animation: 'trello-pop .12s ease',
           }}
           onClick={() => setOpen(false)}
@@ -437,8 +440,8 @@ export function MenuItem({ icon, danger, children, style, ...rest }) {
       style={{
         display: 'flex', alignItems: 'center', gap: space.sm, width: '100%', textAlign: 'left',
         padding: '8px 12px', border: 'none', borderRadius: radius.base, cursor: 'pointer',
-        background: hover ? color.offWhite : 'transparent',
-        color: danger ? color.danger : color.navyDeep, fontFamily: font.text, fontSize: 14, ...style,
+        background: hover ? color.surfaceAlt : 'transparent',
+        color: danger ? color.danger : color.text, fontFamily: font.text, fontSize: 14, ...style,
       }}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
@@ -451,7 +454,7 @@ export function MenuItem({ icon, danger, children, style, ...rest }) {
 }
 
 export function MenuDivider() {
-  return <div style={{ height: 1, background: color.offWhite, margin: `${space.xs} 0` }} />;
+  return <div style={{ height: 1, background: color.border, margin: `${space.xs} 0` }} />;
 }
 
 /* ------------------------------------------------------------------ Tooltip */
@@ -473,7 +476,7 @@ export function Tooltip({ label, children, side = 'top' }) {
       {show && label && (
         <span style={{
           position: 'absolute', ...pos, zIndex: 300, whiteSpace: 'nowrap',
-          background: color.navyDeep, color: color.white, fontFamily: font.text,
+          background: '#091E42', color: '#FFFFFF', fontFamily: font.text,
           fontSize: 12, padding: '4px 8px', borderRadius: radius.base, pointerEvents: 'none',
         }}>{label}</span>
       )}
@@ -501,6 +504,58 @@ export function EmptyState({ icon, title, description, action, style }) {
 
 const ToastContext = createContext(null);
 
+const TOAST_KINDS = {
+  success: { bg: '#1F845A', Icon: Check },
+  error: { bg: '#C9372C', Icon: AlertCircle },
+  warning: { bg: '#B38600', Icon: AlertTriangle },
+  info: { bg: '#0C66E4', Icon: Info },
+};
+
+function ToastItem({ toast, onClose }) {
+  const [leaving, setLeaving] = useState(false);
+  const k = TOAST_KINDS[toast.kind] ?? TOAST_KINDS.info;
+  const { Icon } = k;
+
+  const dismiss = useCallback(() => {
+    setLeaving(true);
+    setTimeout(() => onClose(toast.id), 180);
+  }, [onClose, toast.id]);
+
+  useEffect(() => {
+    if (!toast.duration) return undefined;
+    const t = setTimeout(dismiss, toast.duration);
+    return () => clearTimeout(t);
+  }, [toast.duration, dismiss]);
+
+  return (
+    <div
+      role={toast.kind === 'error' ? 'alert' : 'status'}
+      aria-live={toast.kind === 'error' ? 'assertive' : 'polite'}
+      style={{
+        display: 'flex', alignItems: 'center', gap: space.md,
+        background: k.bg, color: '#FFFFFF', fontFamily: font.text, fontSize: 14,
+        padding: '12px 14px', borderRadius: radius.large, boxShadow: shadow.dropdown,
+        minWidth: 280, maxWidth: 380, pointerEvents: 'auto',
+        animation: `${leaving ? 'trello-slide-out' : 'trello-slide-in'} .18s ease forwards`,
+      }}
+    >
+      <Icon size={18} style={{ flexShrink: 0 }} />
+      <span style={{ flex: 1, lineHeight: '20px' }}>{toast.message}</span>
+      <button
+        type="button"
+        aria-label="Dismiss notification"
+        onClick={dismiss}
+        style={{
+          display: 'inline-flex', border: 'none', background: 'transparent',
+          color: 'rgba(255,255,255,0.85)', cursor: 'pointer', padding: 2, borderRadius: radius.base,
+        }}
+      >
+        <X size={16} />
+      </button>
+    </div>
+  );
+}
+
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
 
@@ -508,52 +563,31 @@ export function ToastProvider({ children }) {
 
   const push = useCallback((message, opts = {}) => {
     const id = Math.random().toString(36).slice(2);
-    const toast = { id, message, kind: opts.kind ?? 'info', duration: opts.duration ?? 4000 };
-    setToasts((t) => [...t, toast]);
-    if (toast.duration) setTimeout(() => remove(id), toast.duration);
+    const duration = opts.duration === undefined ? 4000 : opts.duration;
+    setToasts((t) => [...t, { id, message, kind: opts.kind ?? 'info', duration }]);
     return id;
-  }, [remove]);
+  }, []);
 
-  const value = {
+  const value = useMemo(() => ({
     toast: push,
+    push,
+    dismiss: remove,
     success: (m, o) => push(m, { ...o, kind: 'success' }),
     error: (m, o) => push(m, { ...o, kind: 'error' }),
     info: (m, o) => push(m, { ...o, kind: 'info' }),
-  };
-
-  const kinds = {
-    success: { bg: '#1F6E43', icon: '✓' },
-    error: { bg: color.danger, icon: '!' },
-    info: { bg: color.navyDeep, icon: 'i' },
-  };
+    warning: (m, o) => push(m, { ...o, kind: 'warning' }),
+  }), [push, remove]);
 
   return (
     <ToastContext.Provider value={value}>
       {children}
       {createPortal(
         <div style={{
-          position: 'fixed', bottom: space.lg, right: space.lg, zIndex: 2000,
-          display: 'flex', flexDirection: 'column', gap: space.sm, maxWidth: 360,
+          position: 'fixed', top: space.lg, right: space.lg, zIndex: 2000,
+          display: 'flex', flexDirection: 'column', gap: space.sm,
+          pointerEvents: 'none',
         }}>
-          {toasts.map((t) => {
-            const k = kinds[t.kind] ?? kinds.info;
-            return (
-              <div key={t.id} role="alert" onClick={() => remove(t.id)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: space.md, cursor: 'pointer',
-                  background: k.bg, color: color.white, fontFamily: font.text, fontSize: 14,
-                  padding: '12px 16px', borderRadius: radius.large, boxShadow: shadow.dropdown,
-                  animation: 'trello-slide-in .18s ease',
-                }}>
-                <span style={{
-                  width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
-                  background: 'rgba(255,255,255,0.2)', display: 'inline-flex',
-                  alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12,
-                }}>{k.icon}</span>
-                <span style={{ flex: 1 }}>{t.message}</span>
-              </div>
-            );
-          })}
+          {toasts.map((t) => <ToastItem key={t.id} toast={t} onClose={remove} />)}
         </div>,
         document.body
       )}
@@ -567,34 +601,69 @@ export function useToast() {
   return ctx;
 }
 
-/* ----------------------------------------------------------- Global styles */
+/* ------------------------------------------------------------- ConfirmDialog */
 
-export function GlobalStyles() {
+export function ConfirmDialog({
+  open, title = 'Are you sure?', message, confirmText = 'Confirm',
+  cancelText = 'Cancel', danger = false, onConfirm, onCancel,
+}) {
   return (
-    <style>{`
-      *, *::before, *::after { box-sizing: border-box; }
-      html, body, #root { margin: 0; height: 100%; }
-      body {
-        font-family: ${font.text};
-        color: ${color.navyDeep};
-        background: ${color.offWhite};
-        -webkit-font-smoothing: antialiased;
-        text-rendering: optimizeLegibility;
-      }
-      a { color: ${color.blue}; text-decoration: none; }
-      a:hover { color: ${color.blueBright}; }
-      button { font-family: inherit; }
-      input, textarea, select { font-family: inherit; }
-      ::placeholder { color: ${color.mediumGray}; }
-      ::-webkit-scrollbar { height: 10px; width: 10px; }
-      ::-webkit-scrollbar-track { background: transparent; }
-      ::-webkit-scrollbar-thumb { background: rgba(9,30,66,0.2); border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
-      ::-webkit-scrollbar-thumb:hover { background: rgba(9,30,66,0.32); background-clip: padding-box; }
-      @keyframes trello-spin { to { transform: rotate(360deg); } }
-      @keyframes trello-shimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
-      @keyframes trello-fade { from { opacity: 0; } to { opacity: 1; } }
-      @keyframes trello-pop { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
-      @keyframes trello-slide-in { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: translateX(0); } }
-    `}</style>
+    <Modal
+      open={open}
+      onClose={onCancel}
+      title={title}
+      size="sm"
+      footer={(
+        <>
+          <Button variant="ghost" onClick={onCancel} autoFocus>{cancelText}</Button>
+          <Button variant={danger ? 'danger' : 'primary'} onClick={onConfirm}>{confirmText}</Button>
+        </>
+      )}
+    >
+      {message && (
+        <div style={{ fontFamily: font.text, fontSize: 14, lineHeight: '21px', color: color.textMuted }}>
+          {message}
+        </div>
+      )}
+    </Modal>
   );
 }
+
+const ConfirmContext = createContext(null);
+
+export function ConfirmProvider({ children }) {
+  const [state, setState] = useState(null); // { opts, resolve }
+
+  const confirm = useCallback((opts = {}) => new Promise((resolve) => {
+    setState({ opts, resolve });
+  }), []);
+
+  const close = useCallback((result) => {
+    setState((s) => { s?.resolve(result); return null; });
+  }, []);
+
+  const value = useMemo(() => ({ confirm }), [confirm]);
+
+  return (
+    <ConfirmContext.Provider value={value}>
+      {children}
+      <ConfirmDialog
+        open={!!state}
+        title={state?.opts.title}
+        message={state?.opts.message}
+        confirmText={state?.opts.confirmText}
+        cancelText={state?.opts.cancelText}
+        danger={state?.opts.danger}
+        onConfirm={() => close(true)}
+        onCancel={() => close(false)}
+      />
+    </ConfirmContext.Provider>
+  );
+}
+
+export function useConfirm() {
+  const ctx = useContext(ConfirmContext);
+  if (!ctx) throw new Error('useConfirm must be used within ConfirmProvider');
+  return ctx.confirm;
+}
+

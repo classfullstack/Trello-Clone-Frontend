@@ -1,85 +1,116 @@
 import { useState } from 'react';
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { useDroppable } from '@dnd-kit/core';
-import { Button, Input, color, font, radius, space } from '@trello/ui';
+import { CSS } from '@dnd-kit/utilities';
+import { Plus, MoreHorizontal, Pencil, Trash2, Archive, GripVertical } from 'lucide-react';
+import {
+  Button, Input, IconButton, Dropdown, MenuItem,
+  color, font, radius, space,
+} from '@trello/ui';
 import { CardTile } from './CardTile';
 
-export function ListColumn({ list, cards, onAddCard, onCardClick }) {
+export function ListColumn({ list, cards, onAddCard, onCardClick, onRename, onDelete, onArchive }) {
   const [adding, setAdding] = useState(false);
   const [title, setTitle] = useState('');
-  const { setNodeRef } = useDroppable({ id: `list:${list.id}`, data: { type: 'list', listId: list.id } });
+  const [editing, setEditing] = useState(false);
+  const [draftName, setDraftName] = useState(list.name);
 
-  const submit = (e) => {
+  const sortable = useSortable({ id: `list:${list.id}`, data: { type: 'list', listId: list.id } });
+  const { attributes, listeners, setNodeRef: setSortableRef, transform, transition, isDragging } = sortable;
+  const { setNodeRef: setDropRef } = useDroppable({ id: `droplist:${list.id}`, data: { type: 'list', listId: list.id } });
+
+  const submitCard = (e) => {
     e.preventDefault();
-    if (title.trim()) {
-      onAddCard(list.id, title.trim());
-      setTitle('');
-      setAdding(false);
-    }
+    if (title.trim()) { onAddCard(list.id, title.trim()); setTitle(''); setAdding(false); }
+  };
+
+  const submitName = (e) => {
+    e?.preventDefault();
+    const n = draftName.trim();
+    if (n && n !== list.name) onRename(list.id, n);
+    setEditing(false);
+  };
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+    width: 280, flexShrink: 0, background: color.surfaceAlt, borderRadius: radius.large,
+    padding: space.sm, maxHeight: '100%', display: 'flex', flexDirection: 'column',
+    border: `1px solid ${color.border}`,
   };
 
   return (
-    <div
-      style={{
-        width: 280,
-        flexShrink: 0,
-        background: color.offWhite,
-        borderRadius: radius.large,
-        padding: space.sm,
-        maxHeight: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        fontFamily: font.text, fontWeight: 600, fontSize: 14, color: color.navyDeep, padding: '4px 8px',
-      }}>
-        <span>{list.name}</span>
-        {cards.length > 0 && (
-          <span style={{ fontSize: 12, fontWeight: 500, color: color.navyLight }}>{cards.length}</span>
+    <div ref={setSortableRef} style={style}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '2px 4px 4px' }}>
+        <span {...attributes} {...listeners}
+          style={{ display: 'inline-flex', cursor: 'grab', color: color.textMuted }} aria-label="Drag list">
+          <GripVertical size={16} />
+        </span>
+        {editing ? (
+          <form onSubmit={submitName} style={{ flex: 1 }}>
+            <Input autoFocus value={draftName} onChange={(e) => setDraftName(e.target.value)}
+              onBlur={submitName} style={{ minHeight: 30, padding: '4px 8px', fontWeight: 600 }} />
+          </form>
+        ) : (
+          <button
+            onClick={() => { setDraftName(list.name); setEditing(true); }}
+            style={{
+              flex: 1, textAlign: 'left', border: 'none', background: 'transparent', cursor: 'text',
+              fontFamily: font.text, fontWeight: 600, fontSize: 14, color: color.text, padding: '2px 4px',
+            }}
+          >
+            {list.name}
+          </button>
         )}
+        {cards.length > 0 && !editing && (
+          <span style={{ fontSize: 12, fontWeight: 500, color: color.textMuted }}>{cards.length}</span>
+        )}
+        <Dropdown
+          align="right" width={170}
+          trigger={<IconButton label="List actions" size={28}><MoreHorizontal size={16} /></IconButton>}
+        >
+          <MenuItem icon={<Pencil size={16} />} onClick={() => { setDraftName(list.name); setEditing(true); }}>Rename</MenuItem>
+          <MenuItem icon={<Archive size={16} />} onClick={() => onArchive(list.id)}>Archive</MenuItem>
+          <MenuItem icon={<Trash2 size={16} />} danger onClick={() => onDelete(list)}>Delete</MenuItem>
+        </Dropdown>
       </div>
 
-      <div ref={setNodeRef} style={{ overflowY: 'auto', flex: 1, minHeight: 8, padding: '4px 0' }}>
+      <div ref={setDropRef} style={{ overflowY: 'auto', flex: 1, minHeight: 8, padding: '4px 0' }}>
         <SortableContext items={cards.map((c) => c.id)} strategy={verticalListSortingStrategy}>
           {cards.map((c) => (
             <CardTile key={c.id} card={c} onClick={() => onCardClick(c)} />
           ))}
         </SortableContext>
+        {cards.length === 0 && (
+          <div style={{
+            border: `2px dashed ${color.border}`, borderRadius: radius.large, padding: space.base,
+            textAlign: 'center', fontSize: 12, color: color.textMuted,
+          }}>
+            Drop cards here
+          </div>
+        )}
       </div>
 
       {adding ? (
-        <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: space.sm }}>
-          <Input
-            autoFocus
-            placeholder="Card title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            onBlur={() => !title && setAdding(false)}
-          />
+        <form onSubmit={submitCard} style={{ display: 'flex', flexDirection: 'column', gap: space.sm }}>
+          <Input autoFocus placeholder="Card title" value={title}
+            onChange={(e) => setTitle(e.target.value)} onBlur={() => !title && setAdding(false)} />
           <div style={{ display: 'flex', gap: space.sm }}>
-            <Button type="submit">Add</Button>
-            <Button type="button" variant="ghost" onClick={() => { setAdding(false); setTitle(''); }}>
-              Cancel
-            </Button>
+            <Button type="submit" size="sm">Add</Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => { setAdding(false); setTitle(''); }}>Cancel</Button>
           </div>
         </form>
       ) : (
         <button
           onClick={() => setAdding(true)}
           style={{
-            border: 'none',
-            background: 'transparent',
-            color: color.navyLight,
-            textAlign: 'left',
-            padding: '8px',
-            cursor: 'pointer',
-            borderRadius: radius.base,
-            fontSize: 14,
+            display: 'flex', alignItems: 'center', gap: 6, width: '100%', border: 'none',
+            background: 'transparent', color: color.textMuted, textAlign: 'left', padding: '8px',
+            cursor: 'pointer', borderRadius: radius.base, fontSize: 14, fontFamily: font.text,
           }}
         >
-          + Add a card
+          <Plus size={15} /> Add a card
         </button>
       )}
     </div>

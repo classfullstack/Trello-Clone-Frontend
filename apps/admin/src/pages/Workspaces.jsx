@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  Button, Modal, Badge, Avatar, IconButton, Dropdown, MenuItem,
-  usePermission, useToast, color, space, font,
+  Badge, Avatar, IconButton, Dropdown, MenuItem,
+  usePermission, useToast, useConfirm, color, space,
 } from '@trello/ui';
+import { MoreHorizontal, Trash2, FolderX } from 'lucide-react';
 import { api } from '../lib/api';
 import { PageHeader, SearchInput } from '../components/Layout';
 import { Table, Pagination } from '../components/Table';
@@ -18,9 +19,9 @@ export function WorkspacesPage() {
   const qc = useQueryClient();
   const { can } = usePermission();
   const toast = useToast();
+  const confirm = useConfirm();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['admin', 'workspaces', search, page],
@@ -38,10 +39,19 @@ export function WorkspacesPage() {
       qc.invalidateQueries({ queryKey: ['admin', 'workspaces'] });
       qc.invalidateQueries({ queryKey: ['admin', 'stats'] });
       toast.success('Workspace deleted.');
-      setDeleteTarget(null);
     },
     onError: (err) => toast.error(err.response?.data?.message ?? 'Delete failed.'),
   });
+
+  const onDeleteClick = async (w) => {
+    const ok = await confirm({
+      title: 'Delete workspace',
+      message: `Permanently delete ${w.name} and all of its boards? This cannot be undone.`,
+      confirmText: 'Delete permanently',
+      danger: true,
+    });
+    if (ok) del.mutate(w.id);
+  };
 
   const canDelete = can('workspaces.delete');
 
@@ -50,21 +60,21 @@ export function WorkspacesPage() {
       key: 'name', header: 'Workspace', render: (w) => (
         <div style={{ display: 'flex', alignItems: 'center', gap: space.md }}>
           <Avatar name={w.name} size={32} style={{ borderRadius: 6 }} />
-          <span style={{ fontWeight: 600, color: color.navyDeep }}>{w.name}</span>
+          <span style={{ fontWeight: 600, color: color.text }}>{w.name}</span>
         </div>
       ),
     },
-    { key: 'ownerEmail', header: 'Owner', render: (w) => <span style={{ color: color.navyMedium }}>{w.ownerEmail ?? '—'}</span> },
+    { key: 'ownerEmail', header: 'Owner', render: (w) => <span style={{ color: color.textMuted }}>{w.ownerEmail ?? '—'}</span> },
     { key: 'memberCount', header: 'Members', align: 'center', render: (w) => <Badge>{w.memberCount ?? 0}</Badge> },
     { key: 'boardCount', header: 'Boards', align: 'center', render: (w) => <Badge kind="primary">{w.boardCount ?? 0}</Badge> },
-    { key: 'createdAt', header: 'Created', render: (w) => <span style={{ color: color.navyLight }}>{fmtDate(w.createdAt)}</span> },
+    { key: 'createdAt', header: 'Created', render: (w) => <span style={{ color: color.textMuted }}>{fmtDate(w.createdAt)}</span> },
   ];
 
   if (canDelete) {
     columns.push({
       key: 'actions', header: '', width: 64, align: 'right', render: (w) => (
-        <Dropdown align="right" width={180} trigger={<IconButton label="Actions">⋯</IconButton>}>
-          <MenuItem icon="🗑️" danger onClick={() => setDeleteTarget(w)}>Delete workspace</MenuItem>
+        <Dropdown align="right" width={180} trigger={<IconButton label="Actions"><MoreHorizontal size={18} /></IconButton>}>
+          <MenuItem icon={<Trash2 size={16} />} danger onClick={() => onDeleteClick(w)}>Delete workspace</MenuItem>
         </Dropdown>
       ),
     });
@@ -88,29 +98,10 @@ export function WorkspacesPage() {
         error={isError ? 'Failed to load workspaces. The endpoint may not be available yet.' : null}
         empty="No workspaces found"
         emptyDescription={search ? 'Try a different search term.' : 'Workspaces created by users will appear here.'}
-        emptyIcon="🗂️"
+        emptyIcon={<FolderX size={36} />}
       />
 
       <Pagination page={page} pageSize={PAGE_SIZE} total={total} onPage={setPage} />
-
-      <Modal
-        open={!!deleteTarget}
-        onClose={() => setDeleteTarget(null)}
-        title="Delete workspace"
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setDeleteTarget(null)}>Cancel</Button>
-            <Button variant="danger" loading={del.isPending} onClick={() => deleteTarget && del.mutate(deleteTarget.id)}>
-              Delete permanently
-            </Button>
-          </>
-        }
-      >
-        <p style={{ fontFamily: font.text, color: color.navyMedium, margin: 0 }}>
-          Permanently delete <strong>{deleteTarget?.name}</strong> and all of its boards?
-          This cannot be undone.
-        </p>
-      </Modal>
     </div>
   );
 }

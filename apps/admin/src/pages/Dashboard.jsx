@@ -1,8 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { Card, Skeleton, color, space, font, radius } from '@trello/ui';
+import {
+  Users, UserCheck, UserX, KanbanSquare, LayoutDashboard, Database,
+} from 'lucide-react';
 import { api } from '../lib/api';
 import { PageHeader } from '../components/Layout';
-import { IconUsers, IconActive, IconSuspended, IconWorkspaces, IconBoards, IconStorage } from '../components/icons';
 
 function fmtNum(v) {
   if (v === undefined || v === null) return '—';
@@ -18,13 +20,14 @@ function fmtBytes(bytes) {
   return `${val.toFixed(val >= 100 || i === 0 ? 0 : 1)} ${units[i]}`;
 }
 
+// Translucent tints adapt to light/dark since fg resolves via CSS vars.
 const TINTS = {
-  blue: { bg: '#E9F2FE', fg: color.blue },
-  green: { bg: '#E6F4EA', fg: '#1F6E43' },
+  blue: { bg: 'rgba(24,104,219,0.12)', fg: color.blue },
+  green: { bg: color.successBg, fg: color.success },
   red: { bg: color.errorBg, fg: color.danger },
-  purple: { bg: '#F3E8FF', fg: '#7E22CE' },
-  cyan: { bg: '#E0F7FB', fg: '#0E7490' },
-  gray: { bg: color.offWhite, fg: color.navyMedium },
+  purple: { bg: 'rgba(168,85,247,0.14)', fg: color.purple },
+  cyan: { bg: 'rgba(6,182,212,0.14)', fg: color.cyan },
+  gray: { bg: color.surfaceAlt, fg: color.textMuted },
 };
 
 function StatCard({ label, value, Icon, tint = 'blue', loading }) {
@@ -33,8 +36,8 @@ function StatCard({ label, value, Icon, tint = 'blue', loading }) {
     <Card hoverable style={{ padding: space.lg }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: space.base }}>
         <div style={{ minWidth: 0 }}>
-          <div style={{ color: color.navyLight, fontSize: 13, fontFamily: font.text, fontWeight: 500 }}>{label}</div>
-          <div style={{ fontFamily: font.display, fontSize: 30, fontWeight: 700, color: color.navyDeep, marginTop: space.sm, lineHeight: 1.1 }}>
+          <div style={{ color: color.textMuted, fontSize: 13, fontFamily: font.text, fontWeight: 500 }}>{label}</div>
+          <div style={{ fontFamily: font.display, fontSize: 30, fontWeight: 700, color: color.text, marginTop: space.sm, lineHeight: 1.1 }}>
             {loading ? <Skeleton width={72} height={30} /> : value}
           </div>
         </div>
@@ -57,12 +60,12 @@ export function DashboardPage() {
   });
 
   const cards = [
-    { label: 'Total users', value: fmtNum(data?.users?.total), Icon: IconUsers, tint: 'blue' },
-    { label: 'Active users', value: fmtNum(data?.users?.active), Icon: IconActive, tint: 'green' },
-    { label: 'Suspended users', value: fmtNum(data?.users?.suspended), Icon: IconSuspended, tint: 'red' },
-    { label: 'Workspaces', value: fmtNum(data?.workspaces?.total), Icon: IconWorkspaces, tint: 'purple' },
-    { label: 'Boards', value: fmtNum(data?.boards?.total), Icon: IconBoards, tint: 'cyan' },
-    { label: 'Storage used', value: fmtBytes(data?.storage?.bytes), Icon: IconStorage, tint: 'gray' },
+    { label: 'Total users', value: fmtNum(data?.users?.total), Icon: Users, tint: 'blue' },
+    { label: 'Active users', value: fmtNum(data?.users?.active), Icon: UserCheck, tint: 'green' },
+    { label: 'Suspended users', value: fmtNum(data?.users?.suspended), Icon: UserX, tint: 'red' },
+    { label: 'Workspaces', value: fmtNum(data?.workspaces?.total), Icon: KanbanSquare, tint: 'purple' },
+    { label: 'Boards', value: fmtNum(data?.boards?.total), Icon: LayoutDashboard, tint: 'cyan' },
+    { label: 'Storage used', value: fmtBytes(data?.storage?.bytes), Icon: Database, tint: 'gray' },
   ];
 
   return (

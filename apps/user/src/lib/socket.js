@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 
 let socket = null;
 
-function getSocket() {
+export function getSocket() {
   if (!socket) {
     socket = io('/', {
       path: '/socket.io',
@@ -23,9 +23,8 @@ export function useBoardSocket(boardId) {
   const qc = useQueryClient();
 
   useEffect(() => {
-    if (!boardId) return;
+    if (!boardId) return undefined;
     const s = getSocket();
-    const room = `board:${boardId}`;
 
     const invalidate = () => {
       qc.invalidateQueries({ queryKey: ['board', boardId] });
@@ -48,4 +47,24 @@ export function useBoardSocket(boardId) {
       events.forEach((ev) => s.off(ev, invalidate));
     };
   }, [boardId, qc]);
+}
+
+// Listen for `notification:new` (server auto-joins the user:<id> room on connect).
+// Live-updates the notifications list + unread badge, optional subtle toast.
+export function useUserSocket(enabled, onNew) {
+  const qc = useQueryClient();
+
+  useEffect(() => {
+    if (!enabled) return undefined;
+    const s = getSocket();
+
+    const handle = (notification) => {
+      qc.invalidateQueries({ queryKey: ['notifications'] });
+      qc.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
+      onNew?.(notification);
+    };
+
+    s.on('notification:new', handle);
+    return () => { s.off('notification:new', handle); };
+  }, [enabled, qc, onNew]);
 }

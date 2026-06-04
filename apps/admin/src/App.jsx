@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth, usePermission, Spinner, color } from '@trello/ui';
 import { SYSTEM_ROLES } from './lib/api';
+import { useThemeSync } from './lib/settings';
 import { Layout } from './components/Layout';
 import { RequirePermission, NotAuthorized } from './components/RequirePermission';
 import { LoginPage } from './pages/Login';
@@ -8,14 +9,18 @@ import { DashboardPage } from './pages/Dashboard';
 import { UsersPage } from './pages/Users';
 import { WorkspacesPage } from './pages/Workspaces';
 import { AuditPage } from './pages/Audit';
+import { ProfilePage } from './pages/Profile';
+import { SettingsPage } from './pages/Settings';
 
 export function App() {
   const { user, loading, logout } = useAuth();
   const { hasRole } = usePermission();
 
+  useThemeSync(!!user);
+
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: color.offWhite }}>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: color.surfaceAlt }}>
         <Spinner size={32} />
       </div>
     );
@@ -54,6 +59,8 @@ export function App() {
             </RequirePermission>
           }
         />
+        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/settings" element={<SettingsPage />} />
         <Route path="/login" element={<Navigate to="/dashboard" replace />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

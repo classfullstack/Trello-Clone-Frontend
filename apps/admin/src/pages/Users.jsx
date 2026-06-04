@@ -2,8 +2,11 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Button, Badge, Modal, Select, Input, Avatar, Dropdown, MenuItem, IconButton,
-  usePermission, useToast, color, space, font,
+  usePermission, useToast, useConfirm, color, space, font,
 } from '@trello/ui';
+import {
+  MoreHorizontal, ShieldCheck, Ban, CheckCircle2, UserX,
+} from 'lucide-react';
 import { api, SYSTEM_ROLES } from '../lib/api';
 import { PageHeader, SearchInput } from '../components/Layout';
 import { Table, Pagination } from '../components/Table';
@@ -19,10 +22,10 @@ export function UsersPage() {
   const qc = useQueryClient();
   const { can } = usePermission();
   const toast = useToast();
+  const confirm = useConfirm();
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [suspendTarget, setSuspendTarget] = useState(null);
   const [roleTarget, setRoleTarget] = useState(null);
   const [roleKey, setRoleKey] = useState('admin');
   const [tenantId, setTenantId] = useState('');
@@ -50,10 +53,21 @@ export function UsersPage() {
       qc.invalidateQueries({ queryKey: ['admin', 'users'] });
       qc.invalidateQueries({ queryKey: ['admin', 'stats'] });
       toast.success(vars.suspend ? 'User suspended.' : 'User reinstated.');
-      setSuspendTarget(null);
     },
     onError: (err) => toast.error(err.response?.data?.message ?? 'Action failed.'),
   });
+
+  const onSuspendClick = async (u, doSuspend) => {
+    const ok = await confirm({
+      title: doSuspend ? 'Suspend user' : 'Reinstate user',
+      message: doSuspend
+        ? `Suspend ${u.email}? They lose access immediately.`
+        : `Reinstate ${u.email}? Access will be restored.`,
+      confirmText: doSuspend ? 'Suspend' : 'Reinstate',
+      danger: doSuspend,
+    });
+    if (ok) suspend.mutate({ id: u.id, suspend: doSuspend });
+  };
 
   const assignRole = useMutation({
     mutationFn: (vars) => api.post('/admin/roles/assign', vars),
@@ -77,8 +91,8 @@ export function UsersPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: space.md }}>
           <Avatar name={u.name} email={u.email} size={32} />
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontWeight: 600, color: color.navyDeep }}>{u.name || u.email}</div>
-            {u.name && <div style={{ color: color.navyLight, fontSize: 12 }}>{u.email}</div>}
+            <div style={{ fontWeight: 600, color: color.text }}>{u.name || u.email}</div>
+            {u.name && <div style={{ color: color.textMuted, fontSize: 12 }}>{u.email}</div>}
           </div>
         </div>
       ),
@@ -99,24 +113,24 @@ export function UsersPage() {
         <Badge kind={isActive(u) ? 'success' : 'error'}>{isActive(u) ? 'Active' : 'Suspended'}</Badge>
       ),
     },
-    { key: 'createdAt', header: 'Joined', render: (u) => <span style={{ color: color.navyLight }}>{fmtDate(u.createdAt)}</span> },
+    { key: 'createdAt', header: 'Joined', render: (u) => <span style={{ color: color.textMuted }}>{fmtDate(u.createdAt)}</span> },
   ];
 
   if (hasActions) {
     columns.push({
       key: 'actions', header: '', width: 64, align: 'right', render: (u) => (
         <Dropdown align="right" width={200} trigger={
-          <IconButton label="Actions">⋯</IconButton>
+          <IconButton label="Actions"><MoreHorizontal size={18} /></IconButton>
         }>
           {canAssign && (
-            <MenuItem icon="🛡️" onClick={() => { setRoleTarget(u); setRoleKey('admin'); setTenantId(''); }}>
+            <MenuItem icon={<ShieldCheck size={16} />} onClick={() => { setRoleTarget(u); setRoleKey('admin'); setTenantId(''); }}>
               Assign role
             </MenuItem>
           )}
           {canSuspend && (
             isActive(u)
-              ? <MenuItem icon="⛔" danger onClick={() => setSuspendTarget({ user: u, suspend: true })}>Suspend user</MenuItem>
-              : <MenuItem icon="✓" onClick={() => setSuspendTarget({ user: u, suspend: false })}>Reinstate user</MenuItem>
+              ? <MenuItem icon={<Ban size={16} />} danger onClick={() => onSuspendClick(u, true)}>Suspend user</MenuItem>
+              : <MenuItem icon={<CheckCircle2 size={16} />} onClick={() => onSuspendClick(u, false)}>Reinstate user</MenuItem>
           )}
         </Dropdown>
       ),
@@ -124,7 +138,6 @@ export function UsersPage() {
   }
 
   const total = data?.total ?? 0;
-  const suspending = suspendTarget?.suspend;
 
   return (
     <div>
@@ -142,35 +155,10 @@ export function UsersPage() {
         error={isError ? 'Failed to load users. The endpoint may not be available yet.' : null}
         empty="No users found"
         emptyDescription={search ? 'Try a different search term.' : 'Users will appear here once they sign up.'}
-        emptyIcon="👤"
+        emptyIcon={<UserX size={36} />}
       />
 
       <Pagination page={page} pageSize={PAGE_SIZE} total={total} onPage={setPage} />
-
-      {/* Suspend / reinstate confirm */}
-      <Modal
-        open={!!suspendTarget}
-        onClose={() => setSuspendTarget(null)}
-        title={suspending ? 'Suspend user' : 'Reinstate user'}
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setSuspendTarget(null)}>Cancel</Button>
-            <Button
-              variant={suspending ? 'danger' : 'primary'}
-              loading={suspend.isPending}
-              onClick={() => suspendTarget && suspend.mutate({ id: suspendTarget.user.id, suspend: suspendTarget.suspend })}
-            >
-              {suspending ? 'Suspend' : 'Reinstate'}
-            </Button>
-          </>
-        }
-      >
-        <p style={{ fontFamily: font.text, color: color.navyMedium, margin: 0 }}>
-          {suspending
-            ? <>Suspend <strong>{suspendTarget?.user.email}</strong>? They lose access immediately.</>
-            : <>Reinstate <strong>{suspendTarget?.user.email}</strong>? Access will be restored.</>}
-        </p>
-      </Modal>
 
       {/* Assign role */}
       <Modal
@@ -191,7 +179,7 @@ export function UsersPage() {
           </>
         }
       >
-        <p style={{ fontFamily: font.text, color: color.navyMedium, marginTop: 0 }}>
+        <p style={{ fontFamily: font.text, color: color.textMuted, marginTop: 0 }}>
           Assign a role to <strong>{roleTarget?.email}</strong>.
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: space.base }}>

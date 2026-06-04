@@ -1,15 +1,15 @@
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Button, Input, Spinner, color, font, space, shadow, radius } from '@trello/ui';
+import { Link, useParams, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import {
+  ArrowLeft, Plus, MoreHorizontal, Pencil, Trash2, Archive, ArchiveRestore, Image, AlertTriangle, LayoutGrid,
+} from 'lucide-react';
+import {
+  Button, Input, Modal, Spinner, EmptyState, IconButton, Dropdown, MenuItem, useConfirm,
+  color, font, space, shadow, radius, boardBackgrounds,
+} from '@trello/ui';
 import { api } from '../lib/api';
-
-const BOARD_GRADIENTS = [
-  `linear-gradient(135deg, ${color.blue}, ${color.blueDark})`,
-  `linear-gradient(135deg, ${color.purple}, ${color.blue})`,
-  `linear-gradient(135deg, ${color.cyan}, ${color.blue})`,
-  `linear-gradient(135deg, ${color.navyMedium}, ${color.navyDeep})`,
-];
+import { useCreateBoard, useUpdateBoard, useDeleteBoard } from '../lib/wsData';
 
 async function fetchBoards(workspaceId) {
   const res = await api.get('/boards', { params: { workspaceId } });
@@ -18,68 +18,142 @@ async function fetchBoards(workspaceId) {
 
 export function WorkspaceBoards() {
   const { workspaceId = '' } = useParams();
-  const qc = useQueryClient();
+  const navigate = useNavigate();
+  const confirm = useConfirm();
   const [name, setName] = useState('');
+  const [editing, setEditing] = useState(null); // { id, name }
+  const [bgFor, setBgFor] = useState(null); // board id
 
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['boards', workspaceId],
     queryFn: () => fetchBoards(workspaceId),
     enabled: !!workspaceId,
   });
 
-  const create = useMutation({
-    mutationFn: (n) => api.post('/boards', { workspaceId, name: n }),
-    onSuccess: () => {
-      setName('');
-      qc.invalidateQueries({ queryKey: ['boards', workspaceId] });
-    },
-  });
+  const create = useCreateBoard(workspaceId);
+  const update = useUpdateBoard(workspaceId);
+  const remove = useDeleteBoard(workspaceId);
 
-  const onSubmit = (e) => {
+  const onCreate = (e) => {
     e.preventDefault();
-    if (name.trim()) create.mutate(name.trim());
+    const n = name.trim();
+    if (n) create.mutate({ name: n }, { onSuccess: () => setName('') });
+  };
+
+  const submitRename = (e) => {
+    e.preventDefault();
+    const n = editing?.name.trim();
+    if (n) update.mutate({ id: editing.id, patch: { name: n } }, { onSuccess: () => setEditing(null) });
+  };
+
+  const onArchive = (b) => update.mutate({ id: b.id, patch: { archived: !b.archived } });
+
+  const onDelete = async (b) => {
+    const ok = await confirm({
+      title: 'Delete board?', message: `"${b.name}" will be permanently removed. This cannot be undone.`,
+      confirmText: 'Delete', danger: true,
+    });
+    if (ok) remove.mutate(b.id);
+  };
+
+  const pickBg = (bg) => {
+    update.mutate({ id: bgFor, patch: { background: bg } }, { onSuccess: () => setBgFor(null) });
   };
 
   const boards = data ?? [];
 
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto', padding: space.xl }}>
-      <Link to="/" style={{ fontSize: 14, color: color.navyLight }}>← Workspaces</Link>
-      <h1 style={{ fontFamily: font.display, fontSize: 24, fontWeight: 500, color: color.navyDeep }}>Boards</h1>
+    <div style={{ maxWidth: 1100, margin: '0 auto', padding: `${space.xl} ${space.base}` }}>
+      <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 14, color: color.textMuted }}>
+        <ArrowLeft size={15} /> Workspaces
+      </Link>
+      <h1 style={{ fontFamily: font.display, fontSize: 24, fontWeight: 600, color: color.text }}>Boards</h1>
 
-      <form onSubmit={onSubmit} style={{ display: 'flex', gap: space.sm, maxWidth: 480, marginBottom: space.xl }}>
-        <Input placeholder="New board name" value={name} onChange={(e) => setName(e.target.value)} />
-        <Button type="submit" disabled={create.isPending} style={{ whiteSpace: 'nowrap' }}>Create</Button>
+      <form onSubmit={onCreate} style={{ display: 'flex', gap: space.sm, maxWidth: 480, marginBottom: space.xl }}>
+        <Input placeholder="New board name" value={name} onChange={(e) => setName(e.target.value)} wrapStyle={{ flex: 1 }} />
+        <Button type="submit" leftIcon={<Plus size={16} />} loading={create.isPending} disabled={!name.trim()} style={{ whiteSpace: 'nowrap' }}>Create</Button>
       </form>
 
       {isLoading && <Spinner />}
-      {isError && <div style={{ color: color.navyLight, padding: space.xl }}>Could not load boards.</div>}
+      {isError && (
+        <EmptyState icon={<AlertTriangle size={36} />} title="Could not load boards"
+          description="Try again in a moment."
+          action={<Button variant="secondary" onClick={() => refetch()}>Retry</Button>} />
+      )}
       {!isLoading && !isError && boards.length === 0 && (
-        <div style={{ color: color.navyLight, padding: space.xl }}>No boards yet. Create one above.</div>
+        <EmptyState icon={<LayoutGrid size={36} />} title="No boards yet" description="Create one above to get started." />
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: space.base }}>
         {boards.map((b, i) => (
-          <Link key={b.id} to={`/b/${b.id}`} style={{ textDecoration: 'none' }}>
-            <div
-              style={{
-                height: 100,
-                borderRadius: radius.large,
-                background: b.background || BOARD_GRADIENTS[i % BOARD_GRADIENTS.length],
-                boxShadow: shadow.base,
-                padding: space.base,
-                color: color.white,
-                fontFamily: font.display,
-                fontSize: 18,
-                fontWeight: 500,
-                display: 'flex',
-                alignItems: 'flex-end',
-              }}
-            >
-              {b.name}
-            </div>
-          </Link>
+          <BoardCard
+            key={b.id} board={b} grad={boardBackgrounds[i % boardBackgrounds.length]}
+            onOpen={() => navigate(`/b/${b.id}`)}
+            onRename={() => setEditing({ id: b.id, name: b.name })}
+            onChangeBg={() => setBgFor(b.id)}
+            onArchive={() => onArchive(b)}
+            onDelete={() => onDelete(b)}
+          />
         ))}
+      </div>
+
+      <Modal
+        open={!!editing} onClose={() => setEditing(null)} title="Rename board" size="sm"
+        footer={<>
+          <Button variant="ghost" onClick={() => setEditing(null)}>Cancel</Button>
+          <Button onClick={submitRename} loading={update.isPending} disabled={!editing?.name.trim()}>Save</Button>
+        </>}
+      >
+        <form onSubmit={submitRename}>
+          <Input label="Board name" autoFocus value={editing?.name ?? ''}
+            onChange={(e) => setEditing((s) => ({ ...s, name: e.target.value }))} />
+        </form>
+      </Modal>
+
+      <Modal open={!!bgFor} onClose={() => setBgFor(null)} title="Change background" size="sm">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: space.sm }}>
+          {boardBackgrounds.map((bg) => (
+            <button key={bg} onClick={() => pickBg(bg)}
+              style={{ height: 56, borderRadius: radius.large, background: bg, border: `1px solid ${color.border}`, cursor: 'pointer' }}
+              aria-label="Pick background" />
+          ))}
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+function BoardCard({ board, grad, onOpen, onRename, onChangeBg, onArchive, onDelete }) {
+  return (
+    <div style={{ position: 'relative' }}>
+      <button
+        onClick={onOpen}
+        style={{
+          width: '100%', textAlign: 'left', height: 100, borderRadius: radius.large,
+          background: board.background || grad, boxShadow: shadow.base, padding: space.base,
+          color: '#fff', fontFamily: font.display, fontSize: 18, fontWeight: 600,
+          display: 'flex', alignItems: 'flex-end', cursor: 'pointer', border: 'none',
+          opacity: board.archived ? 0.55 : 1,
+        }}
+      >
+        {board.name}{board.archived ? ' (archived)' : ''}
+      </button>
+      <div style={{ position: 'absolute', top: 6, right: 6 }}>
+        <Dropdown
+          align="right" width={190}
+          trigger={
+            <IconButton label="Board actions" style={{ background: 'rgba(0,0,0,0.28)', color: '#fff' }}>
+              <MoreHorizontal size={18} />
+            </IconButton>
+          }
+        >
+          <MenuItem icon={<Pencil size={16} />} onClick={onRename}>Rename</MenuItem>
+          <MenuItem icon={<Image size={16} />} onClick={onChangeBg}>Change background</MenuItem>
+          <MenuItem icon={board.archived ? <ArchiveRestore size={16} /> : <Archive size={16} />} onClick={onArchive}>
+            {board.archived ? 'Unarchive' : 'Archive'}
+          </MenuItem>
+          <MenuItem icon={<Trash2 size={16} />} danger onClick={onDelete}>Delete</MenuItem>
+        </Dropdown>
       </div>
     </div>
   );

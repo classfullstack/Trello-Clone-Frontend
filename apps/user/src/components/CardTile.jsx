@@ -1,5 +1,6 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { Clock, MessageSquare, CheckSquare } from 'lucide-react';
 import { Avatar, LabelChip, color, font, radius, shadow, space } from '@trello/ui';
 
 function dueState(due) {
@@ -22,7 +23,7 @@ export function CardTile({ card, onClick, overlay = false }) {
     transform: overlay ? undefined : CSS.Transform.toString(transform),
     transition,
     opacity: !overlay && isDragging ? 0.3 : 1,
-    background: color.white,
+    background: color.surface,
     borderRadius: radius.large,
     boxShadow: overlay ? shadow.hover : shadow.subtle,
     padding: '8px 10px',
@@ -30,7 +31,7 @@ export function CardTile({ card, onClick, overlay = false }) {
     cursor: overlay ? 'grabbing' : 'pointer',
     fontFamily: font.text,
     fontSize: 14,
-    color: color.navyDeep,
+    color: color.text,
     border: `1px solid ${color.border}`,
     rotate: overlay ? '3deg' : undefined,
     width: overlay ? 264 : undefined,
@@ -40,6 +41,7 @@ export function CardTile({ card, onClick, overlay = false }) {
   const members = card.members ?? [];
   const due = dueState(card.dueDate);
   const count = card.commentCount ?? 0;
+  const cl = card.checklistSummary;
 
   return (
     <div ref={overlay ? undefined : setNodeRef} style={style} {...(overlay ? {} : attributes)} {...(overlay ? {} : listeners)} onClick={onClick}>
@@ -51,21 +53,26 @@ export function CardTile({ card, onClick, overlay = false }) {
 
       <div style={{ lineHeight: '20px' }}>{card.title}</div>
 
-      {(due || count > 0 || members.length > 0) && (
+      {(due || count > 0 || members.length > 0 || cl) && (
         <div style={{ display: 'flex', alignItems: 'center', gap: space.sm, marginTop: 6, flexWrap: 'wrap' }}>
           {due && (
             <span style={{
               display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12,
               padding: '2px 6px', borderRadius: radius.base,
-              background: due.overdue ? color.errorBg : color.offWhite,
-              color: due.overdue ? color.danger : color.navyLight,
+              background: due.overdue ? color.errorBg : color.surfaceAlt,
+              color: due.overdue ? color.danger : color.textMuted,
             }}>
-              🕒 {due.label}
+              <Clock size={12} /> {due.label}
+            </span>
+          )}
+          {cl && cl.total > 0 && (
+            <span style={{ fontSize: 12, color: color.textMuted, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+              <CheckSquare size={12} /> {cl.done}/{cl.total}
             </span>
           )}
           {count > 0 && (
-            <span style={{ fontSize: 12, color: color.navyLight, display: 'inline-flex', gap: 3 }}>
-              💬 {count}
+            <span style={{ fontSize: 12, color: color.textMuted, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+              <MessageSquare size={12} /> {count}
             </span>
           )}
           <span style={{ flex: 1 }} />

@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useToast } from '@trello/ui';
 import { api } from './api';
 
 function unwrap(data) {
@@ -58,8 +59,8 @@ export function useBoardData(boardId) {
 
   return {
     board: boardQ.data,
-    lists,
-    cards,
+    lists: lists.filter((l) => !l.archived),
+    cards: cards.filter((c) => !c.archived),
     labels: boardQ.data?.labels ?? [],
     isLoading: boardQ.isLoading || (!nested && (listsQ.isLoading || cardsQ.isLoading)),
     isError: boardQ.isError || (!nested && (listsQ.isError || cardsQ.isError)),
@@ -72,32 +73,82 @@ function invalidateBoard(qc, boardId) {
   qc.invalidateQueries({ queryKey: ['cards', boardId] });
 }
 
+/* --------------------------------------------------------------------- List */
+
 export function useCreateList(boardId) {
   const qc = useQueryClient();
+  const toast = useToast();
   return useMutation({
-    mutationFn: (name) => api.post('/lists', { boardId, name }),
-    onSuccess: () => invalidateBoard(qc, boardId),
+    mutationFn: ({ name, position }) => api.post('/lists', { boardId, name, position }),
+    onSuccess: () => { toast.success('List added.'); invalidateBoard(qc, boardId); },
+    onError: () => toast.error('Could not create list.'),
   });
 }
 
-export function useUpdateList(boardId) {
+export function useUpdateList(boardId, opts = {}) {
   const qc = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: ({ listId, patch }) => api.patch(`/lists/${listId}`, patch),
-    onSuccess: () => invalidateBoard(qc, boardId),
+    onSuccess: () => {
+      if (opts.successMessage !== null) toast.success(opts.successMessage ?? 'List updated.');
+      invalidateBoard(qc, boardId);
+    },
+    onError: () => toast.error('Could not update list.'),
   });
 }
+
+export function useDeleteList(boardId) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  return useMutation({
+    mutationFn: (listId) => api.delete(`/lists/${listId}`),
+    onSuccess: () => { toast.success('List deleted.'); invalidateBoard(qc, boardId); },
+    onError: () => toast.error('Could not delete list.'),
+  });
+}
+
+export function useMoveList(boardId) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  return useMutation({
+    mutationFn: ({ listId, position }) => api.patch(`/lists/${listId}`, { position }),
+    onMutate: async ({ listId, position }) => {
+      await qc.cancelQueries({ queryKey: ['board', boardId] });
+      await qc.cancelQueries({ queryKey: ['lists', boardId] });
+      const prevBoard = qc.getQueryData(['board', boardId]);
+      const prevLists = qc.getQueryData(['lists', boardId]);
+      const bump = (l) => (l.id === listId ? { ...l, position } : l);
+      if (prevBoard?.lists) {
+        qc.setQueryData(['board', boardId], (old) => ({ ...old, lists: old.lists.map(bump) }));
+      }
+      if (prevLists) qc.setQueryData(['lists', boardId], (old) => (old ?? []).map(bump));
+      return { prevBoard, prevLists };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prevBoard) qc.setQueryData(['board', boardId], ctx.prevBoard);
+      if (ctx?.prevLists) qc.setQueryData(['lists', boardId], ctx.prevLists);
+      toast.error('Could not reorder list.');
+    },
+    onSettled: () => invalidateBoard(qc, boardId),
+  });
+}
+
+/* --------------------------------------------------------------------- Card */
 
 export function useCreateCard(boardId) {
   const qc = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: ({ listId, title, position }) => api.post('/cards', { listId, title, position }),
-    onSuccess: () => invalidateBoard(qc, boardId),
+    onSuccess: () => { toast.success('Card added.'); invalidateBoard(qc, boardId); },
+    onError: () => toast.error('Could not add card.'),
   });
 }
 
 export function useMoveCard(boardId) {
   const qc = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: ({ cardId, listId, position }) =>
       api.patch(`/cards/${cardId}/move`, { listId, position }),
@@ -129,16 +180,32 @@ export function useMoveCard(boardId) {
     onError: (_e, _v, ctx) => {
       if (ctx?.prevCards) qc.setQueryData(['cards', boardId], ctx.prevCards);
       if (ctx?.prevBoard) qc.setQueryData(['board', boardId], ctx.prevBoard);
+      toast.error('Could not move card.');
     },
     onSettled: () => invalidateBoard(qc, boardId),
   });
 }
 
-export function useUpdateCard(boardId) {
+export function useUpdateCard(boardId, opts = {}) {
   const qc = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: ({ cardId, patch }) => api.patch(`/cards/${cardId}`, patch),
-    onSuccess: () => invalidateBoard(qc, boardId),
+    onSuccess: () => {
+      if (opts.successMessage !== null) toast.success(opts.successMessage ?? 'Card saved.');
+      invalidateBoard(qc, boardId);
+    },
+    onError: () => toast.error('Could not save changes.'),
+  });
+}
+
+export function useDeleteCard(boardId) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  return useMutation({
+    mutationFn: (cardId) => api.delete(`/cards/${cardId}`),
+    onSuccess: () => { toast.success('Card deleted.'); invalidateBoard(qc, boardId); },
+    onError: () => toast.error('Could not delete card.'),
   });
 }
 
@@ -153,6 +220,8 @@ export function useCardDetail(cardId) {
   });
 }
 
+/* ------------------------------------------------------------------ Comments */
+
 export function useComments(cardId) {
   return useQuery({
     queryKey: ['comments', cardId],
@@ -166,24 +235,112 @@ export function useComments(cardId) {
 
 export function useAddComment(cardId) {
   const qc = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: (body) => api.post(`/cards/${cardId}/comments`, { body }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['comments', cardId] }),
+    onSuccess: () => { toast.success('Comment added.'); qc.invalidateQueries({ queryKey: ['comments', cardId] }); },
+    onError: () => toast.error('Could not add comment.'),
   });
 }
 
+export function useEditComment(cardId) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  return useMutation({
+    mutationFn: ({ commentId, body }) => api.patch(`/comments/${commentId}`, { body }),
+    onSuccess: () => { toast.success('Comment updated.'); qc.invalidateQueries({ queryKey: ['comments', cardId] }); },
+    onError: () => toast.error('Could not edit comment.'),
+  });
+}
+
+export function useDeleteComment(cardId) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  return useMutation({
+    mutationFn: (commentId) => api.delete(`/comments/${commentId}`),
+    onSuccess: () => { toast.success('Comment deleted.'); qc.invalidateQueries({ queryKey: ['comments', cardId] }); },
+    onError: () => toast.error('Could not delete comment.'),
+  });
+}
+
+/* ---------------------------------------------------------------- Checklist */
+
 export function useToggleChecklistItem(cardId) {
   const qc = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: ({ itemId, done }) => api.patch(`/checklist-items/${itemId}`, { done }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['card', cardId] }),
+    onError: () => toast.error('Could not update item.'),
   });
 }
 
 export function useAddChecklistItem(cardId) {
   const qc = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: ({ checklistId, text }) => api.post(`/checklists/${checklistId}/items`, { text }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['card', cardId] }),
+    onSuccess: () => { toast.success('Item added.'); qc.invalidateQueries({ queryKey: ['card', cardId] }); },
+    onError: () => toast.error('Could not add item.'),
+  });
+}
+
+export function useDeleteChecklistItem(cardId) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  return useMutation({
+    mutationFn: (itemId) => api.delete(`/checklist-items/${itemId}`),
+    onSuccess: () => { toast.success('Item deleted.'); qc.invalidateQueries({ queryKey: ['card', cardId] }); },
+    onError: () => toast.error('Could not delete item.'),
+  });
+}
+
+/* ------------------------------------------------------------------- Labels */
+
+export function useAddCardLabel(boardId, cardId) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  return useMutation({
+    mutationFn: (labelId) => api.post(`/cards/${cardId}/labels`, { labelId }),
+    onSuccess: () => {
+      toast.success('Label added.');
+      qc.invalidateQueries({ queryKey: ['card', cardId] });
+      invalidateBoard(qc, boardId);
+    },
+    onError: () => toast.error('Could not add label.'),
+  });
+}
+
+export function useRemoveCardLabel(boardId, cardId) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  return useMutation({
+    mutationFn: (labelId) => api.delete(`/cards/${cardId}/labels/${labelId}`),
+    onSuccess: () => {
+      toast.success('Label removed.');
+      qc.invalidateQueries({ queryKey: ['card', cardId] });
+      invalidateBoard(qc, boardId);
+    },
+    onError: () => toast.error('Could not remove label.'),
+  });
+}
+
+export function useCreateBoardLabel(boardId) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  return useMutation({
+    mutationFn: ({ name, color }) => api.post(`/boards/${boardId}/labels`, { name, color }),
+    onSuccess: () => { toast.success('Label created.'); invalidateBoard(qc, boardId); },
+    onError: () => toast.error('Could not create label.'),
+  });
+}
+
+export function useDeleteBoardLabel(boardId) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  return useMutation({
+    mutationFn: (labelId) => api.delete(`/labels/${labelId}`),
+    onSuccess: () => { toast.success('Label deleted.'); invalidateBoard(qc, boardId); },
+    onError: () => toast.error('Could not delete label.'),
   });
 }

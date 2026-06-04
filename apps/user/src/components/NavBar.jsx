@@ -1,8 +1,11 @@
 import { useNavigate } from 'react-router-dom';
+import { Search, Home, User, Settings as SettingsIcon, LogOut } from 'lucide-react';
 import {
-  useAuth, useToast, Avatar, IconButton, Dropdown, MenuItem, MenuDivider,
+  useAuth, useToast, ThemeToggle, Avatar, Dropdown, MenuItem, MenuDivider,
   color, font, radius, space,
 } from '@trello/ui';
+import { meUser } from '../lib/me';
+import { NotificationsBell } from './NotificationsBell';
 
 function Logo({ onClick }) {
   return (
@@ -23,6 +26,7 @@ function Logo({ onClick }) {
 
 export function NavBar() {
   const { user, logout } = useAuth();
+  const me = meUser(user);
   const toast = useToast();
   const navigate = useNavigate();
 
@@ -34,8 +38,8 @@ export function NavBar() {
 
   return (
     <header style={{
-      position: 'sticky', top: 0, zIndex: 500, background: color.white,
-      borderBottom: `1px solid ${color.lightGray}`, padding: '6px 16px',
+      position: 'sticky', top: 0, zIndex: 500, background: color.surface,
+      borderBottom: `1px solid ${color.border}`, padding: '6px 16px',
       display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: space.base,
       height: 52, boxSizing: 'border-box',
     }}>
@@ -46,45 +50,48 @@ export function NavBar() {
       <div style={{
         flex: 1, maxWidth: 360, display: 'flex', alignItems: 'center', gap: space.sm,
         border: `1px solid ${color.border}`, borderRadius: radius.primary, padding: '0 10px',
-        background: color.white,
+        background: color.surface,
       }}>
-        <span aria-hidden style={{ color: color.mediumGray, fontSize: 14 }}>⌕</span>
+        <Search size={16} aria-hidden style={{ color: color.mediumGray, flexShrink: 0 }} />
         <input
           placeholder="Search"
           style={{
             flex: 1, border: 'none', outline: 'none', height: 34, fontFamily: font.text,
-            fontSize: 14, color: color.navyDeep, background: 'transparent',
+            fontSize: 14, color: color.text, background: 'transparent',
           }}
         />
       </div>
 
-      {user && (
+      {me && (
         <div style={{ display: 'flex', alignItems: 'center', gap: space.xs }}>
-          <IconButton label="Notifications">🔔</IconButton>
+          <ThemeToggle />
+          <NotificationsBell enabled={!!me} />
           <Dropdown
             align="right"
             width={240}
             trigger={
               <button aria-label="Account menu" style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: 0, borderRadius: '50%' }}>
-                <Avatar name={user.name} email={user.email} size={32} />
+                <Avatar name={me.name} email={me.email} src={me.avatarUrl} size={32} />
               </button>
             }
           >
             <div style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: space.sm }}>
-              <Avatar name={user.name} email={user.email} size={36} />
+              <Avatar name={me.name} email={me.email} src={me.avatarUrl} size={36} />
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontFamily: font.text, fontWeight: 600, fontSize: 14, color: color.navyDeep, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {user.name || 'Member'}
+                <div style={{ fontFamily: font.text, fontWeight: 600, fontSize: 14, color: color.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {me.name || 'Member'}
                 </div>
-                <div style={{ fontFamily: font.text, fontSize: 12, color: color.navyLight, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {user.email}
+                <div style={{ fontFamily: font.text, fontSize: 12, color: color.textMuted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {me.email}
                 </div>
               </div>
             </div>
             <MenuDivider />
-            <MenuItem icon="🏠" onClick={() => navigate('/')}>Workspaces</MenuItem>
+            <MenuItem icon={<Home size={16} />} onClick={() => navigate('/')}>Workspaces</MenuItem>
+            <MenuItem icon={<User size={16} />} onClick={() => navigate('/profile')}>Profile</MenuItem>
+            <MenuItem icon={<SettingsIcon size={16} />} onClick={() => navigate('/settings')}>Settings</MenuItem>
             <MenuDivider />
-            <MenuItem icon="↩" danger onClick={onLogout}>Log out</MenuItem>
+            <MenuItem icon={<LogOut size={16} />} danger onClick={onLogout}>Log out</MenuItem>
           </Dropdown>
         </div>
       )}

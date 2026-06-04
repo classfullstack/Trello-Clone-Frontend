@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Button, Input, Tooltip, useToast, color, space, font, radius } from '@trello/ui';
+import { Download, ScrollText } from 'lucide-react';
 import { api } from '../lib/api';
 import { PageHeader } from '../components/Layout';
 import { Table, Pagination } from '../components/Table';
-import { IconDownload } from '../components/icons';
 
 const PAGE_SIZE = 25;
 const EMPTY = { actor: '', action: '', from: '', to: '' };
@@ -71,7 +71,7 @@ export function AuditPage() {
     {
       key: 'createdAt', header: 'Time', width: 170,
       render: (r) => r.createdAt
-        ? <span style={{ color: color.navyMedium }}>{new Date(r.createdAt).toLocaleString()}</span>
+        ? <span style={{ color: color.text }}>{new Date(r.createdAt).toLocaleString()}</span>
         : '—',
     },
     { key: 'actor', header: 'Actor', render: (r) => <span style={{ fontWeight: 500 }}>{r.actorEmail ?? r.actorId ?? '—'}</span> },
@@ -79,13 +79,13 @@ export function AuditPage() {
       key: 'action', header: 'Action',
       render: (r) => (
         <span style={{
-          fontFamily: font.mono, fontSize: 12, background: color.offWhite,
-          padding: '2px 8px', borderRadius: radius.base, color: color.navyMedium,
+          fontFamily: font.mono, fontSize: 12, background: color.surfaceAlt,
+          padding: '2px 8px', borderRadius: radius.base, color: color.text,
         }}>{r.action}</span>
       ),
     },
-    { key: 'targetId', header: 'Target', render: (r) => <span style={{ color: color.navyLight }}>{r.targetId ?? '—'}</span> },
-    { key: 'ipAddress', header: 'IP', width: 130, render: (r) => <span style={{ fontFamily: font.mono, fontSize: 12, color: color.navyLight }}>{r.ipAddress ?? '—'}</span> },
+    { key: 'targetId', header: 'Target', render: (r) => <span style={{ color: color.textMuted }}>{r.targetId ?? '—'}</span> },
+    { key: 'ipAddress', header: 'IP', width: 130, render: (r) => <span style={{ fontFamily: font.mono, fontSize: 12, color: color.textMuted }}>{r.ipAddress ?? '—'}</span> },
     {
       key: 'metadata', header: 'Metadata',
       render: (r) => {
@@ -94,7 +94,7 @@ export function AuditPage() {
         const short = t.length > 40 ? `${t.slice(0, 40)}…` : t;
         return (
           <Tooltip label={t}>
-            <span style={{ fontFamily: font.mono, fontSize: 12, color: color.navyLight, cursor: 'help' }}>{short}</span>
+            <span style={{ fontFamily: font.mono, fontSize: 12, color: color.textMuted, cursor: 'help' }}>{short}</span>
           </Tooltip>
         );
       },
@@ -102,7 +102,7 @@ export function AuditPage() {
   ];
 
   const field = { display: 'flex', flexDirection: 'column', gap: 4 };
-  const labelStyle = { fontSize: 12, fontWeight: 600, color: color.darkGray, fontFamily: font.text };
+  const labelStyle = { fontSize: 12, fontWeight: 600, color: color.textMuted, fontFamily: font.text };
 
   return (
     <div>
@@ -112,13 +112,13 @@ export function AuditPage() {
         breadcrumb={['Admin', 'Audit Log']}
         action={
           <Button variant="secondary" onClick={exportCsv} disabled={rows.length === 0}
-            leftIcon={<IconDownload size={16} />}>Export CSV</Button>
+            leftIcon={<Download size={16} />}>Export CSV</Button>
         }
       />
 
       <div style={{
         display: 'flex', gap: space.base, flexWrap: 'wrap', alignItems: 'flex-end',
-        marginBottom: space.base, background: color.white, padding: space.base,
+        marginBottom: space.base, background: color.surface, padding: space.base,
         border: `1px solid ${color.border}`, borderRadius: radius.large,
       }}>
         <div style={field}>
@@ -153,7 +153,7 @@ export function AuditPage() {
         error={isError ? 'Failed to load audit log. The endpoint may not be available yet.' : null}
         empty="No audit entries"
         emptyDescription="No records match the current filters."
-        emptyIcon="📋"
+        emptyIcon={<ScrollText size={36} />}
       />
 
       <Pagination page={page} pageSize={PAGE_SIZE} total={total} onPage={setPage} />
