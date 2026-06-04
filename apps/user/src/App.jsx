@@ -28,9 +28,9 @@ function ProtectedRoute({ children }) {
 
 function Shell({ children }) {
   return (
-    <div style={{ minHeight: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <NavBar />
-      <div style={{ flex: 1, minHeight: 0 }}>{children}</div>
+      <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>{children}</div>
     </div>
   );
 }
@@ -56,7 +56,7 @@ export function App() {
   return (
     <>
       {user && <ThemeSync />}
-      <div style={{ minHeight: '100%', background: color.surfaceAlt }}>
+      <div style={{ minHeight: '100dvh', background: color.surfaceAlt }}>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />

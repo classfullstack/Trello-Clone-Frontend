@@ -160,10 +160,10 @@ export function BoardView() {
   };
   const pickBg = (bg) => updateBoard.mutate({ id: boardId, patch: { background: bg } }, { onSuccess: () => setBgOpen(false) });
 
-  const bg = board?.background || `linear-gradient(135deg, ${color.blue}, ${color.navyDeep})`;
+  const bg = board?.background || 'linear-gradient(135deg, #0079BF 0%, #5067C5 100%)';
 
   return (
-    <div style={{ height: '100%', background: bg, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+    <div style={{ height: '100%', minHeight: '100%', background: bg, backgroundAttachment: 'fixed', display: 'flex', flexDirection: 'column' }}>
       <div style={{
         padding: '12px 24px', display: 'flex', alignItems: 'center', gap: space.base,
         background: 'rgba(0,0,0,0.18)', flexShrink: 0,
