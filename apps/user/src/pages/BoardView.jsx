@@ -8,22 +8,23 @@ import {
   useSensors,
   closestCorners,
 } from '@dnd-kit/core';
-import { Button, Input, Spinner, color, font, radius, shadow, space } from '@trello/ui';
 import {
-  useBoard, useLists, useCards, useCreateList, useCreateCard, useMoveCard,
-} from '../lib/boardData';
+  Button, Input, Spinner, EmptyState, useToast,
+  color, font, radius, shadow, space,
+} from '@trello/ui';
+import { useBoardData, useCreateList, useCreateCard, useMoveCard } from '../lib/boardData';
 import { useBoardSocket } from '../lib/socket';
 import { midpoint } from '../lib/position';
 import { ListColumn } from '../components/ListColumn';
+import { CardTile } from '../components/CardTile';
 import { CardModal } from '../components/CardModal';
 
 export function BoardView() {
   const { boardId = '' } = useParams();
+  const toast = useToast();
   useBoardSocket(boardId);
 
-  const { data: board } = useBoard(boardId);
-  const { data: lists, isLoading: listsLoading, isError } = useLists(boardId);
-  const { data: cards } = useCards(boardId);
+  const { board, lists, cards, isLoading, isError } = useBoardData(boardId);
   const createList = useCreateList(boardId);
   const createCard = useCreateCard(boardId);
   const moveCard = useMoveCard(boardId);
@@ -37,8 +38,8 @@ export function BoardView() {
 
   const cardsByList = useMemo(() => {
     const map = new Map();
-    (lists ?? []).forEach((l) => map.set(l.id, []));
-    (cards ?? []).forEach((c) => {
+    lists.forEach((l) => map.set(l.id, []));
+    cards.forEach((c) => {
       const arr = map.get(c.listId) ?? [];
       arr.push(c);
       map.set(c.listId, arr);
@@ -47,7 +48,7 @@ export function BoardView() {
     return map;
   }, [lists, cards]);
 
-  const findCard = (id) => (cards ?? []).find((c) => c.id === id) ?? null;
+  const findCard = (id) => cards.find((c) => c.id === id) ?? null;
 
   const onDragStart = (e) => setActiveCard(findCard(String(e.active.id)));
 
@@ -59,7 +60,6 @@ export function BoardView() {
     const card = findCard(String(active.id));
     if (!card) return;
 
-    // Resolve target list: dropped over a card or over an empty list droppable.
     const overData = over.data.current;
     const targetListId = overData?.listId ?? card.listId;
     const overCard = overData?.type === 'card' ? findCard(String(over.id)) : null;
@@ -74,76 +74,110 @@ export function BoardView() {
     const position = midpoint(before, after);
 
     if (card.listId === targetListId && card.position === position) return;
-    moveCard.mutate({ cardId: card.id, listId: targetListId, position });
+    moveCard.mutate(
+      { cardId: card.id, listId: targetListId, position },
+      { onError: () => toast.error('Could not move card.') },
+    );
   };
 
   const submitList = (e) => {
     e.preventDefault();
-    if (listName.trim()) {
-      createList.mutate(listName.trim());
-      setListName('');
-      setAddingList(false);
-    }
+    const name = listName.trim();
+    if (!name) return;
+    createList.mutate(name, {
+      onError: () => toast.error('Could not create list.'),
+    });
+    setListName('');
+    setAddingList(false);
+  };
+
+  const addCard = (listId, title) => {
+    const dest = cardsByList.get(listId) ?? [];
+    const last = dest.length ? dest[dest.length - 1].position : null;
+    createCard.mutate(
+      { listId, title, position: midpoint(last, null) },
+      { onError: () => toast.error('Could not add card.') },
+    );
   };
 
   const bg = board?.background || `linear-gradient(135deg, ${color.blue}, ${color.navyDeep})`;
 
   return (
-    <div style={{ height: '100%', background: bg, display: 'flex', flexDirection: 'column' }}>
-      <div style={{ padding: '12px 24px', display: 'flex', alignItems: 'center', gap: space.base }}>
-        <Link to="/" style={{ color: color.white, fontSize: 14 }}>Boards</Link>
-        <h1 style={{ fontFamily: font.display, fontSize: 20, fontWeight: 500, color: color.white, margin: 0 }}>
+    <div style={{ height: '100%', background: bg, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      <div style={{
+        padding: '12px 24px', display: 'flex', alignItems: 'center', gap: space.base,
+        background: 'rgba(0,0,0,0.18)', flexShrink: 0,
+      }}>
+        <Link to="/" style={{ color: color.white, fontSize: 14, opacity: 0.9 }}>Boards</Link>
+        <span style={{ color: 'rgba(255,255,255,0.6)' }}>/</span>
+        <h1 style={{ fontFamily: font.display, fontSize: 20, fontWeight: 600, color: color.white, margin: 0 }}>
           {board?.name ?? 'Board'}
         </h1>
       </div>
 
-      {listsLoading && <Spinner />}
-      {isError && <div style={{ color: color.white, padding: space.xl }}>Could not load board.</div>}
-
-      <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={onDragStart} onDragEnd={onDragEnd}>
-        <div style={{ display: 'flex', gap: space.md, padding: '0 24px 24px', overflowX: 'auto', alignItems: 'flex-start', flex: 1 }}>
-          {(lists ?? []).map((l) => (
-            <ListColumn
-              key={l.id}
-              list={l}
-              cards={cardsByList.get(l.id) ?? []}
-              onAddCard={(listId, title) => createCard.mutate({ listId, title })}
-              onCardClick={(c) => setOpenCard(c)}
-            />
-          ))}
-
-          <div style={{ width: 280, flexShrink: 0 }}>
-            {addingList ? (
-              <form onSubmit={submitList} style={{ background: color.offWhite, borderRadius: radius.large, padding: space.sm, display: 'flex', flexDirection: 'column', gap: space.sm }}>
-                <Input autoFocus placeholder="List name" value={listName} onChange={(e) => setListName(e.target.value)} />
-                <div style={{ display: 'flex', gap: space.sm }}>
-                  <Button type="submit">Add list</Button>
-                  <Button type="button" variant="ghost" onClick={() => setAddingList(false)}>Cancel</Button>
-                </div>
-              </form>
-            ) : (
-              <button
-                onClick={() => setAddingList(true)}
-                style={{
-                  width: '100%', textAlign: 'left', padding: space.md, border: 'none',
-                  background: 'rgba(255,255,255,0.24)', color: color.white, borderRadius: radius.large,
-                  cursor: 'pointer', fontSize: 14, boxShadow: shadow.subtle,
-                }}
-              >
-                + Add a list
-              </button>
-            )}
-          </div>
+      {isLoading && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
+          <Spinner size={32} color={color.white} />
         </div>
+      )}
 
-        <DragOverlay>
-          {activeCard && (
-            <div style={{ background: color.white, borderRadius: radius.large, boxShadow: shadow.hover, padding: space.sm, fontSize: 14, color: color.navyDeep, width: 264 }}>
-              {activeCard.title}
+      {isError && !isLoading && (
+        <EmptyState
+          icon="⚠️"
+          title="Could not load board"
+          description="The board may be unavailable or the backend is offline."
+          style={{ color: color.white }}
+        />
+      )}
+
+      {!isLoading && !isError && (
+        <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={onDragStart} onDragEnd={onDragEnd}>
+          <div style={{
+            display: 'flex', gap: space.md, padding: '16px 24px 24px',
+            overflowX: 'auto', overflowY: 'hidden', alignItems: 'flex-start', flex: 1, minHeight: 0,
+          }}>
+            {lists.map((l) => (
+              <ListColumn
+                key={l.id}
+                list={l}
+                cards={cardsByList.get(l.id) ?? []}
+                onAddCard={addCard}
+                onCardClick={(c) => setOpenCard(c)}
+              />
+            ))}
+
+            <div style={{ width: 280, flexShrink: 0 }}>
+              {addingList ? (
+                <form onSubmit={submitList} style={{
+                  background: color.white, borderRadius: radius.large, padding: space.sm,
+                  display: 'flex', flexDirection: 'column', gap: space.sm, boxShadow: shadow.base,
+                }}>
+                  <Input autoFocus placeholder="Enter list name…" value={listName} onChange={(e) => setListName(e.target.value)} />
+                  <div style={{ display: 'flex', gap: space.sm }}>
+                    <Button type="submit" size="sm" loading={createList.isPending}>Add list</Button>
+                    <Button type="button" variant="ghost" size="sm" onClick={() => { setAddingList(false); setListName(''); }}>Cancel</Button>
+                  </div>
+                </form>
+              ) : (
+                <button
+                  onClick={() => setAddingList(true)}
+                  style={{
+                    width: '100%', textAlign: 'left', padding: space.md, border: 'none',
+                    background: 'rgba(255,255,255,0.24)', color: color.white, borderRadius: radius.large,
+                    cursor: 'pointer', fontSize: 14, fontFamily: font.text, fontWeight: 500,
+                  }}
+                >
+                  + Add {lists.length ? 'another list' : 'a list'}
+                </button>
+              )}
             </div>
-          )}
-        </DragOverlay>
-      </DndContext>
+          </div>
+
+          <DragOverlay>
+            {activeCard && <CardTile card={activeCard} overlay />}
+          </DragOverlay>
+        </DndContext>
+      )}
 
       <CardModal card={openCard} boardId={boardId} onClose={() => setOpenCard(null)} />
     </div>

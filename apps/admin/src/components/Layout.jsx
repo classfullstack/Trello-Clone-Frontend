@@ -1,75 +1,219 @@
-import { NavLink, useNavigate } from 'react-router-dom';
-import { useAuth, color, space, font, radius } from '@trello/ui';
+import { useState } from 'react';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import {
+  useAuth, Avatar, Dropdown, MenuItem, MenuDivider, IconButton,
+  color, space, font, radius, shadow,
+} from '@trello/ui';
+import {
+  IconDashboard, IconUsers, IconWorkspaces, IconAudit,
+  IconLogout, IconShield, IconMenu, IconSearch,
+} from './icons';
 
 const NAV = [
-  { to: '/dashboard', label: 'Dashboard' },
-  { to: '/users', label: 'Users' },
-  { to: '/workspaces', label: 'Workspaces' },
-  { to: '/audit', label: 'Audit Log' },
+  { to: '/dashboard', label: 'Dashboard', Icon: IconDashboard },
+  { to: '/users', label: 'Users', Icon: IconUsers },
+  { to: '/workspaces', label: 'Workspaces', Icon: IconWorkspaces },
+  { to: '/audit', label: 'Audit Log', Icon: IconAudit },
 ];
+
+const SIDEBAR_W = 248;
+
+function SidebarContent({ onNavigate }) {
+  return (
+    <>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: space.sm,
+        padding: `${space.lg} ${space.base}`, marginBottom: space.sm,
+      }}>
+        <span style={{
+          width: 32, height: 32, borderRadius: radius.large, flexShrink: 0,
+          background: color.blue, display: 'inline-flex', alignItems: 'center',
+          justifyContent: 'center', color: color.white,
+        }}>
+          <IconShield size={18} />
+        </span>
+        <span style={{ fontFamily: font.display, fontSize: 18, fontWeight: 700, color: color.white }}>
+          Trello Admin
+        </span>
+      </div>
+      <nav style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: `0 ${space.md}` }}>
+        {NAV.map(({ to, label, Icon }) => (
+          <NavLink
+            key={to}
+            to={to}
+            onClick={onNavigate}
+            style={({ isActive }) => ({
+              display: 'flex', alignItems: 'center', gap: space.md,
+              padding: '10px 12px', borderRadius: radius.large, textDecoration: 'none',
+              color: isActive ? color.white : 'rgba(255,255,255,0.72)',
+              background: isActive ? 'rgba(24,104,219,0.95)' : 'transparent',
+              fontSize: 14.5, fontWeight: isActive ? 600 : 500,
+              transition: 'background .12s, color .12s',
+            })}
+            onMouseEnter={(e) => { if (!e.currentTarget.style.background.includes('rgba(24')) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+            onMouseLeave={(e) => { if (!e.currentTarget.getAttribute('aria-current')) e.currentTarget.style.background = 'transparent'; }}
+          >
+            {({ isActive }) => (
+              <>
+                <span style={{ display: 'inline-flex', opacity: isActive ? 1 : 0.85 }}><Icon size={18} /></span>
+                {label}
+              </>
+            )}
+          </NavLink>
+        ))}
+      </nav>
+      <div style={{
+        marginTop: 'auto', padding: space.base,
+        fontSize: 12, color: 'rgba(255,255,255,0.4)',
+      }}>
+        Admin Console v0.1
+      </div>
+    </>
+  );
+}
 
 export function Layout({ children }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const onLogout = async () => {
     await logout();
     navigate('/login', { replace: true });
   };
 
+  const sidebarStyle = {
+    width: SIDEBAR_W, background: color.navyDeep, color: color.white,
+    display: 'flex', flexDirection: 'column', boxSizing: 'border-box',
+    flexShrink: 0,
+  };
+
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', fontFamily: font.text }}>
-      <aside style={{
-        width: 240, background: color.navyDeep, color: color.white,
-        display: 'flex', flexDirection: 'column', padding: space.lg, boxSizing: 'border-box',
+    <div style={{ display: 'flex', minHeight: '100vh', fontFamily: font.text, background: color.offWhite }}>
+      {/* Desktop sidebar (fixed) */}
+      <aside className="admin-sidebar" style={{
+        ...sidebarStyle, position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 40,
       }}>
-        <div style={{ fontFamily: font.display, fontSize: 20, fontWeight: 600, marginBottom: space.xl }}>
-          Trello Admin
-        </div>
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: space.xs }}>
-          {NAV.map((n) => (
-            <NavLink
-              key={n.to}
-              to={n.to}
-              style={({ isActive }) => ({
-                padding: '10px 14px', borderRadius: radius.base, textDecoration: 'none',
-                color: isActive ? color.white : 'rgba(255,255,255,0.7)',
-                background: isActive ? color.blue : 'transparent',
-                fontSize: 15, fontWeight: isActive ? 600 : 400,
-              })}
-            >
-              {n.label}
-            </NavLink>
-          ))}
-        </nav>
+        <SidebarContent />
       </aside>
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: color.offWhite }}>
+      {/* Mobile drawer */}
+      {mobileOpen && (
+        <>
+          <div onClick={() => setMobileOpen(false)} style={{
+            position: 'fixed', inset: 0, background: 'rgba(9,30,66,0.5)', zIndex: 49,
+          }} />
+          <aside style={{ ...sidebarStyle, position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 50, boxShadow: shadow.modal }}>
+            <SidebarContent onNavigate={() => setMobileOpen(false)} />
+          </aside>
+        </>
+      )}
+
+      <div className="admin-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, marginLeft: SIDEBAR_W }}>
         <header style={{
           height: 60, background: color.white, borderBottom: `1px solid ${color.border}`,
-          display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
-          gap: space.base, padding: `0 ${space.lg}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          gap: space.base, padding: `0 ${space.lg}`, position: 'sticky', top: 0, zIndex: 30,
         }}>
-          <span style={{ color: color.navyMedium, fontSize: 14 }}>{user?.email}</span>
-          <button onClick={onLogout} style={{
-            background: 'transparent', border: `1px solid ${color.border}`, color: color.navyMedium,
-            borderRadius: radius.base, padding: '6px 14px', cursor: 'pointer', fontSize: 14,
-          }}>Logout</button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: space.sm }}>
+            <span className="admin-menu-btn" style={{ display: 'none' }}>
+              <IconButton label="Open menu" onClick={() => setMobileOpen(true)}><IconMenu size={20} /></IconButton>
+            </span>
+          </div>
+
+          <Dropdown align="right" width={240} trigger={
+            <button type="button" style={{
+              display: 'flex', alignItems: 'center', gap: space.sm, cursor: 'pointer',
+              background: 'transparent', border: 'none', padding: '4px 6px', borderRadius: radius.large,
+            }}>
+              <Avatar name={user?.name} email={user?.email} size={32} />
+              <span className="admin-email" style={{ color: color.navyMedium, fontSize: 14, fontWeight: 500 }}>
+                {user?.email}
+              </span>
+            </button>
+          }>
+            <div style={{ padding: '8px 12px 6px' }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: color.navyDeep, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {user?.name || 'Administrator'}
+              </div>
+              <div style={{ fontSize: 12, color: color.navyLight, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {user?.email}
+              </div>
+            </div>
+            <MenuDivider />
+            <MenuItem icon={<IconLogout size={16} />} danger onClick={onLogout}>Sign out</MenuItem>
+          </Dropdown>
         </header>
-        <main style={{ flex: 1, padding: space.xl, overflow: 'auto' }}>{children}</main>
+
+        <main style={{ flex: 1, padding: space.xl, overflow: 'auto', maxWidth: 1280, width: '100%', boxSizing: 'border-box' }}>
+          {children}
+        </main>
+      </div>
+
+      <style>{`
+        @media (max-width: 1023px) {
+          .admin-sidebar { display: none !important; }
+          .admin-content { margin-left: 0 !important; }
+          .admin-menu-btn { display: inline-flex !important; }
+        }
+        @media (max-width: 600px) { .admin-email { display: none !important; } }
+      `}</style>
+    </div>
+  );
+}
+
+export function PageHeader({ title, subtitle, breadcrumb, action }) {
+  return (
+    <div style={{ marginBottom: space.lg }}>
+      {breadcrumb && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: color.navyLight, marginBottom: space.sm }}>
+          {breadcrumb.map((b, i) => (
+            <span key={b} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              {i > 0 && <span style={{ color: color.mediumGray }}>/</span>}
+              <span style={{ color: i === breadcrumb.length - 1 ? color.navyMedium : color.navyLight, fontWeight: i === breadcrumb.length - 1 ? 600 : 400 }}>{b}</span>
+            </span>
+          ))}
+        </div>
+      )}
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: space.base, flexWrap: 'wrap' }}>
+        <div>
+          <h1 style={{ fontFamily: font.display, fontSize: 26, fontWeight: 700, color: color.navyDeep, margin: 0 }}>{title}</h1>
+          {subtitle && <p style={{ color: color.navyLight, margin: `6px 0 0`, fontSize: 14 }}>{subtitle}</p>}
+        </div>
+        {action}
       </div>
     </div>
   );
 }
 
-export function PageTitle({ title, subtitle, action }) {
+// kept for backwards-compat with any imports
+export const PageTitle = PageHeader;
+
+export function SearchInput({ value, onChange, placeholder = 'Search…', width = 320 }) {
+  const [focused, setFocused] = useState(false);
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: space.lg }}>
-      <div>
-        <h1 style={{ fontFamily: font.display, fontSize: 24, fontWeight: 600, color: color.navyDeep, margin: 0 }}>{title}</h1>
-        {subtitle && <p style={{ color: color.navyLight, margin: `${space.xs} 0 0`, fontSize: 14 }}>{subtitle}</p>}
-      </div>
-      {action}
+    <div style={{ position: 'relative', width: '100%', maxWidth: width }}>
+      <span style={{
+        position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
+        color: color.mediumGray, display: 'inline-flex', pointerEvents: 'none',
+      }}>
+        <IconSearch size={16} />
+      </span>
+      <input
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        style={{
+          fontFamily: font.text, fontSize: 14, minHeight: 40, width: '100%',
+          padding: '8px 12px 8px 36px', borderRadius: radius.primary, boxSizing: 'border-box',
+          border: `1px solid ${focused ? color.blue : color.border}`, color: color.navyDeep,
+          background: color.white, outline: 'none',
+          boxShadow: focused ? '0px 0px 0px 3px rgba(24, 104, 219, 0.15)' : 'none',
+          transition: 'border-color .12s, box-shadow .12s',
+        }}
+      />
     </div>
   );
 }

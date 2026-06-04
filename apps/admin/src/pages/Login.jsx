@@ -1,25 +1,37 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth, Button, Input, Card, color, space, font } from '@trello/ui';
+import { useAuth, Button, Input, useToast, color, space, font, radius } from '@trello/ui';
+import { IconShield } from '../components/icons';
 
 export function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const toast = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
-  const [error, setError] = useState(null);
+  const [errors, setErrors] = useState({});
   const [busy, setBusy] = useState(false);
 
-  const onSubmit = async (e) => {
-    e.preventDefault();
-    setError(null);
+  const validate = () => {
+    const e = {};
+    if (!email.trim()) e.email = 'Email is required.';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = 'Enter a valid email.';
+    if (!password) e.password = 'Password is required.';
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const onSubmit = async (ev) => {
+    ev.preventDefault();
+    if (!validate()) return;
     setBusy(true);
     try {
-      await login(email, password, otp || undefined);
+      await login(email.trim(), password, otp || undefined);
       navigate('/dashboard', { replace: true });
     } catch (err) {
-      setError(err.response?.data?.message ?? 'Login failed. Check your credentials or 2FA code.');
+      const msg = err.response?.data?.message ?? 'Login failed. Check your credentials or 2FA code.';
+      toast.error(msg);
     } finally {
       setBusy(false);
     }
@@ -28,23 +40,57 @@ export function LoginPage() {
   return (
     <div style={{
       minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: color.navyDeep, fontFamily: font.text,
+      background: `radial-gradient(1200px 600px at 50% -10%, #14346b 0%, ${color.navyDeep} 60%)`,
+      fontFamily: font.text, padding: space.lg, boxSizing: 'border-box',
     }}>
-      <Card style={{ width: 380, padding: space.xl }}>
-        <h1 style={{ fontFamily: font.display, fontSize: 24, fontWeight: 600, color: color.navyDeep, marginTop: 0 }}>
-          Admin sign in
-        </h1>
-        <p style={{ color: color.navyLight, fontSize: 14, marginTop: 0 }}>
-          Restricted to system administrators.
+      <div style={{ width: '100%', maxWidth: 400 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: space.lg, gap: space.sm }}>
+          <span style={{
+            width: 48, height: 48, borderRadius: radius.large,
+            background: color.blue, display: 'inline-flex', alignItems: 'center',
+            justifyContent: 'center', color: color.white, boxShadow: '0 8px 24px rgba(24,104,219,0.4)',
+          }}>
+            <IconShield size={26} />
+          </span>
+          <span style={{ fontFamily: font.display, fontSize: 22, fontWeight: 700, color: color.white }}>
+            Trello Admin
+          </span>
+        </div>
+
+        <div style={{
+          background: color.white, borderRadius: radius.large, padding: space.xl,
+          boxShadow: 'rgba(9, 30, 66, 0.31) 0px 12px 32px 0px',
+        }}>
+          <h1 style={{ fontFamily: font.display, fontSize: 22, fontWeight: 700, color: color.navyDeep, marginTop: 0, marginBottom: 4 }}>
+            Sign in
+          </h1>
+          <p style={{ color: color.navyLight, fontSize: 14, marginTop: 0, marginBottom: space.lg }}>
+            Restricted to system administrators.
+          </p>
+          <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: space.base }} noValidate>
+            <Input
+              label="Email" type="email" placeholder="you@company.com" autoComplete="username"
+              value={email} onChange={(e) => setEmail(e.target.value)} error={errors.email} autoFocus
+            />
+            <Input
+              label="Password" type="password" placeholder="••••••••" autoComplete="current-password"
+              value={password} onChange={(e) => setPassword(e.target.value)} error={errors.password}
+            />
+            <Input
+              label="2FA code" type="text" inputMode="numeric" placeholder="123456 (if enabled)"
+              value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+              helper="Leave blank if two-factor auth is not enabled."
+            />
+            <Button type="submit" fullWidth loading={busy} disabled={busy} style={{ marginTop: space.xs }}>
+              {busy ? 'Signing in…' : 'Sign in'}
+            </Button>
+          </form>
+        </div>
+
+        <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.45)', fontSize: 12, marginTop: space.lg }}>
+          Protected area. All actions are audited.
         </p>
-        <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: space.base, marginTop: space.base }}>
-          <Input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus />
-          <Input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-          <Input type="text" inputMode="numeric" placeholder="2FA code (if enabled)" value={otp} onChange={(e) => setOtp(e.target.value)} />
-          {error && <div style={{ color: color.danger, fontSize: 13 }}>{error}</div>}
-          <Button type="submit" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</Button>
-        </form>
-      </Card>
+      </div>
     </div>
   );
 }

@@ -28,30 +28,24 @@ export function useBoardSocket(boardId) {
     const room = `board:${boardId}`;
 
     const invalidate = () => {
+      qc.invalidateQueries({ queryKey: ['board', boardId] });
       qc.invalidateQueries({ queryKey: ['lists', boardId] });
       qc.invalidateQueries({ queryKey: ['cards', boardId] });
     };
+    const events = [
+      'card:created', 'card:updated', 'card:moved', 'card:deleted',
+      'list:created', 'list:updated', 'list:deleted', 'comment:created',
+    ];
 
-    const join = () => s.emit('board:join', room);
+    const join = () => s.emit('board:join', { boardId });
     if (s.connected) join();
     s.on('connect', join);
-
-    s.on('card:created', invalidate);
-    s.on('card:updated', invalidate);
-    s.on('card:moved', invalidate);
-    s.on('card:deleted', invalidate);
-    s.on('list:created', invalidate);
-    s.on('list:updated', invalidate);
+    events.forEach((ev) => s.on(ev, invalidate));
 
     return () => {
-      s.emit('board:leave', room);
+      s.emit('board:leave', { boardId });
       s.off('connect', join);
-      s.off('card:created', invalidate);
-      s.off('card:updated', invalidate);
-      s.off('card:moved', invalidate);
-      s.off('card:deleted', invalidate);
-      s.off('list:created', invalidate);
-      s.off('list:updated', invalidate);
+      events.forEach((ev) => s.off(ev, invalidate));
     };
   }, [boardId, qc]);
 }

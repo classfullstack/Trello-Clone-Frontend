@@ -6,9 +6,16 @@ export const color = {
   blue: '#1868DB',
   blueBright: '#357DE8',
   blueDark: '#1558BC',
+  purple: '#A855F7',
+  cyan: '#06B6D4',
+  green: '#4C6B1F',
+  danger: '#C9372C',
   white: '#FFFFFF',
   offWhite: '#F1F2F4',
   border: '#DDDEE1',
+  borderMedium: '#DCDFE4',
+  mutedText: '#C7D1E0',
+  primaryBadgeBg: '#E0ECFF',
 };
 
 export const space = {
@@ -16,7 +23,13 @@ export const space = {
   lg: '24px', xl: '32px', xxl: '52px', xxxl: '60px', max: '76px',
 };
 
-export const radius = { base: '4px', primary: '4.8px', large: '8px', pill: '50px' };
+export const radius = { base: '4px', primary: '4.8px', large: '8px', xlarge: '16px', pill: '50px' };
+
+export const shadow = {
+  subtle: 'rgba(9, 30, 66, 0.13) 0px 1px 1px 0px',
+  base: 'rgba(9, 30, 66, 0.15) 0px 8px 16px 0px',
+  hover: 'rgba(9, 30, 66, 0.20) 0px 12px 24px 0px',
+};
 
 export const font = {
   display: "'Charlie Display', Georgia, 'Times New Roman', serif",

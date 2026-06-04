@@ -1,5 +1,5 @@
 import { Navigate } from 'react-router-dom';
-import { usePermission, color, space, font } from '@trello/ui';
+import { usePermission, Button, color, space, font, radius } from '@trello/ui';
 
 // Route guard — hides UI and redirects. Backend re-checks every mutation (RBAC.md).
 export function RequirePermission({
@@ -28,15 +28,27 @@ export function Can({
 export function NotAuthorized({ onLogout }) {
   return (
     <div style={{
-      minHeight: '100vh', display: 'flex', flexDirection: 'column', gap: space.base,
-      alignItems: 'center', justifyContent: 'center', fontFamily: font.text, color: color.navyDeep,
+      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontFamily: font.text, background: color.offWhite, padding: space.lg, boxSizing: 'border-box',
     }}>
-      <h1 style={{ fontFamily: font.display, color: color.danger }}>Not authorized</h1>
-      <p style={{ color: color.navyLight }}>This account has no admin role.</p>
-      <button onClick={onLogout} style={{
-        background: color.blue, color: color.white, border: 'none', borderRadius: 5,
-        padding: '10px 24px', cursor: 'pointer', fontSize: 15,
-      }}>Sign out</button>
+      <div style={{
+        background: color.white, borderRadius: radius.large, padding: space.xl, maxWidth: 420,
+        textAlign: 'center', boxShadow: 'rgba(9,30,66,0.13) 0px 1px 1px 0px',
+        border: `1px solid ${color.border}`,
+      }}>
+        <div style={{
+          width: 56, height: 56, borderRadius: '50%', margin: `0 auto ${space.base}`,
+          background: color.errorBg, color: color.danger, display: 'inline-flex',
+          alignItems: 'center', justifyContent: 'center', fontSize: 28,
+        }}>⛔</div>
+        <h1 style={{ fontFamily: font.display, fontSize: 22, fontWeight: 700, color: color.navyDeep, margin: `0 0 ${space.sm}` }}>
+          Access denied
+        </h1>
+        <p style={{ color: color.navyLight, margin: `0 0 ${space.lg}`, fontSize: 14 }}>
+          This account has no administrator role. Contact a system administrator if you believe this is a mistake.
+        </p>
+        <Button variant="secondary" onClick={onLogout}>Sign out</Button>
+      </div>
     </div>
   );
 }

@@ -1,149 +1,242 @@
-import { color, space, radius, font, USER_APP_URL } from './tokens';
+import { color, USER_APP_URL } from './tokens';
+import Header from './Header';
+import Faq from './Faq';
+import {
+  IconBoard, IconDrag, IconUsers, IconCheck, IconTag, IconShield,
+  IconCheckSmall, IconBrand, IconX, IconGithub, IconLinkedin,
+} from './icons';
 
 const FEATURES = [
-  { title: 'Boards', body: 'Give every project a home. See work organized at a glance from to-do to done.' },
-  { title: 'Lists & Cards', body: 'Break work into stages and move cards across them with a simple drag.' },
-  { title: 'Collaboration', body: 'Invite your team, assign cards, comment, and stay in sync in real time.' },
-  { title: 'Due dates', body: 'Add deadlines and never miss what matters with clear, visible dates.' },
-  { title: 'Labels & filters', body: 'Color-code and filter cards to find exactly what you need fast.' },
-  { title: 'Fast & simple', body: 'No clutter, no learning curve. Open it and get organized in seconds.' },
+  { icon: IconBoard, bg: color.blue, title: 'Boards & lists', body: 'Give every project a home. See work flow from to-do to done at a single glance.' },
+  { icon: IconDrag, bg: color.purple, title: 'Drag & drop', body: 'Move cards across lists with a smooth, natural drag. Reorder work in seconds.' },
+  { icon: IconUsers, bg: color.cyan, title: 'Real-time collaboration', body: 'Invite your team and watch moves, comments, and edits update live for everyone.' },
+  { icon: IconCheck, bg: color.green, title: 'Checklists', body: 'Break cards into steps and track completion with progress you can actually see.' },
+  { icon: IconTag, bg: color.blueDark, title: 'Labels & filters', body: 'Color-code cards and filter instantly to find exactly what you need, fast.' },
+  { icon: IconShield, bg: color.navyMedium, title: 'Admin console', body: 'Manage members, permissions, and workspace settings from one secure place.' },
+];
+
+const STEPS = [
+  { title: 'Create a board', body: 'Spin up a board for any project, sprint, or goal in a couple of clicks.' },
+  { title: 'Add lists & cards', body: 'Map your workflow into lists, then capture every task as a card you can move.' },
+  { title: 'Collaborate & ship', body: 'Invite your team, assign work, track progress in real time, and get it done.' },
 ];
 
 const PLANS = [
-  { name: 'Free', price: '$0', tag: 'For individuals', features: ['Unlimited cards', 'Up to 10 boards', 'Mobile + web'] },
-  { name: 'Standard', price: '$5', tag: 'Per user / month', features: ['Unlimited boards', 'Advanced checklists', 'Custom fields'], highlight: true },
-  { name: 'Premium', price: '$10', tag: 'Per user / month', features: ['Dashboards', 'Timeline view', 'Admin controls'] },
+  { name: 'Free', price: '$0', per: 'forever', tag: 'For individuals getting started', features: ['Up to 10 boards', 'Unlimited cards', 'Drag & drop', 'Mobile + web'], cta: 'Start free' },
+  { name: 'Pro', price: '$5', per: '/ user / mo', tag: 'For growing teams', features: ['Unlimited boards', 'Real-time collaboration', 'Checklists & due dates', 'Labels & filters', 'Priority support'], cta: 'Start Pro trial', featured: true },
+  { name: 'Business', price: '$10', per: '/ user / mo', tag: 'For organizations', features: ['Everything in Pro', 'Admin console', 'Advanced permissions', 'Usage insights', 'SSO ready'], cta: 'Contact sales' },
 ];
 
-function Cta({ children, primary }) {
-  return (
-    <a
-      href={USER_APP_URL}
-      style={{
-        display: 'inline-block',
-        background: primary ? color.blue : color.white,
-        color: primary ? color.white : color.navyMedium,
-        border: primary ? 'none' : `1px solid ${color.border}`,
-        padding: '14px 28px',
-        borderRadius: radius.primary,
-        fontSize: 17,
-        fontWeight: 600,
-      }}
-    >
-      {children}
-    </a>
-  );
-}
+const TRUST = ['Northwind', 'Acme Co', 'Globex', 'Initech', 'Umbrella', 'Hooli'];
+
+const FOOTER = {
+  Product: ['Features', 'Pricing', 'Integrations', 'Changelog'],
+  Company: ['About', 'Blog', 'Careers', 'Contact'],
+  Legal: ['Privacy', 'Terms', 'Security', 'Cookies'],
+};
 
 export default function Home() {
   return (
-    <main>
-      {/* Nav */}
-      <header
-        style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: `${space.base} ${space.xl}`, borderBottom: `1px solid ${color.border}`,
-        }}
-      >
-        <span style={{ fontFamily: font.display, fontSize: 22, fontWeight: 700, color: color.blue }}>
-          Trello Clone
-        </span>
-        <Cta primary>Log in</Cta>
-      </header>
-
-      {/* Hero */}
-      <section
-        style={{
-          background: color.navyDeep, color: color.white,
-          padding: `${space.max} ${space.xl}`, textAlign: 'center',
-        }}
-      >
-        <h1 style={{ fontSize: 52, fontWeight: 700, maxWidth: 820, margin: '0 auto' }}>
-          Organize anything, together.
-        </h1>
-        <p style={{ fontSize: 20, color: '#C7D1E0', maxWidth: 620, margin: `${space.lg} auto ${space.xl}` }}>
-          Boards, lists, and cards to manage your projects and keep your team in sync — simple, fast, and free to start.
-        </p>
-        <div style={{ display: 'flex', gap: space.base, justifyContent: 'center', flexWrap: 'wrap' }}>
-          <Cta primary>Get started</Cta>
-          <a href="#pricing" style={{ alignSelf: 'center', color: '#C7D1E0', fontWeight: 600 }}>See pricing →</a>
-        </div>
-      </section>
-
-      {/* Features */}
-      <section style={{ padding: `${space.max} ${space.xl}`, maxWidth: 1100, margin: '0 auto' }}>
-        <h2 style={{ fontSize: 36, textAlign: 'center', color: color.navyDeep, marginBottom: space.xl }}>
-          Everything you need to stay on track
-        </h2>
-        <div
-          style={{
-            display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: space.lg,
-          }}
-        >
-          {FEATURES.map((f) => (
-            <div
-              key={f.title}
-              style={{
-                background: color.white, border: `1px solid ${color.border}`,
-                borderRadius: radius.large, padding: space.lg,
-              }}
-            >
-              <h3 style={{ fontSize: 20, color: color.blue, marginBottom: space.sm }}>{f.title}</h3>
-              <p style={{ color: color.navyLight, fontSize: 15 }}>{f.body}</p>
+    <>
+      <Header />
+      <main id="top">
+        {/* Hero */}
+        <section className="hero">
+          <div className="container hero__grid">
+            <div>
+              <span className="eyebrow">Free to start · No credit card</span>
+              <h1>Organize anything, together.</h1>
+              <p className="hero__sub">
+                Boards, lists, and cards to manage your projects and keep your
+                team in sync. Simple, fast, and built for the way you work.
+              </p>
+              <div className="hero__ctas">
+                <a href={USER_APP_URL} className="btn btn-primary btn-lg">Get started free</a>
+                <a href="#features" className="btn btn-secondary btn-lg">See features</a>
+              </div>
+              <p className="hero__note">Join 12,000+ teams shipping work faster.</p>
             </div>
-          ))}
-        </div>
-      </section>
+            <BoardMock />
+          </div>
+        </section>
 
-      {/* Pricing */}
-      <section id="pricing" style={{ background: color.offWhite, padding: `${space.max} ${space.xl}` }}>
-        <div style={{ maxWidth: 1000, margin: '0 auto' }}>
-          <h2 style={{ fontSize: 36, textAlign: 'center', color: color.navyDeep, marginBottom: space.xl }}>
-            Simple pricing
-          </h2>
-          <div
-            style={{
-              display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: space.lg,
-            }}
-          >
-            {PLANS.map((p) => (
-              <div
-                key={p.name}
-                style={{
-                  background: color.white,
-                  border: p.highlight ? `2px solid ${color.blue}` : `1px solid ${color.border}`,
-                  borderRadius: radius.large, padding: space.xl, textAlign: 'center',
-                }}
-              >
-                <h3 style={{ fontSize: 22, color: color.navyDeep }}>{p.name}</h3>
-                <div style={{ fontSize: 40, fontWeight: 700, color: color.blue, margin: `${space.sm} 0` }}>{p.price}</div>
-                <div style={{ color: color.navyLight, fontSize: 14, marginBottom: space.base }}>{p.tag}</div>
-                <ul style={{ listStyle: 'none', textAlign: 'left', display: 'inline-block', color: color.navyMedium, fontSize: 15 }}>
-                  {p.features.map((feat) => (
-                    <li key={feat} style={{ marginBottom: space.sm }}>✓ {feat}</li>
+        {/* Trust strip */}
+        <section className="trust" aria-label="Trusted by teams">
+          <div className="container trust__inner">
+            <p className="trust__label">Trusted by fast-moving teams worldwide</p>
+            <div className="trust__logos">
+              {TRUST.map((t) => (
+                <span className="trust__logo" key={t}>{t}</span>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Features */}
+        <section id="features" className="section">
+          <div className="container">
+            <div className="section-head">
+              <h2>Everything you need to stay on track</h2>
+              <p>A focused set of features that keep work moving, without the clutter.</p>
+            </div>
+            <div className="feature-grid">
+              {FEATURES.map((f) => {
+                const Icon = f.icon;
+                return (
+                  <article className="feature-card" key={f.title}>
+                    <span className="feature-card__icon" style={{ background: f.bg }}>
+                      <Icon />
+                    </span>
+                    <h3>{f.title}</h3>
+                    <p>{f.body}</p>
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* How it works */}
+        <section id="how" className="section" style={{ background: color.offWhite }}>
+          <div className="container">
+            <div className="section-head">
+              <h2>Get organized in three steps</h2>
+              <p>From blank board to shipped work, faster than your next coffee break.</p>
+            </div>
+            <div className="steps">
+              {STEPS.map((s, i) => (
+                <article className="step" key={s.title}>
+                  <span className="step__num">{i + 1}</span>
+                  <h3>{s.title}</h3>
+                  <p>{s.body}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Pricing */}
+        <section id="pricing" className="section pricing">
+          <div className="container">
+            <div className="section-head">
+              <h2>Simple, transparent pricing</h2>
+              <p>Start free and upgrade as your team grows. Cancel anytime.</p>
+            </div>
+            <div className="price-grid">
+              {PLANS.map((p) => (
+                <article
+                  className={`price-card${p.featured ? ' price-card--featured' : ''}`}
+                  key={p.name}
+                >
+                  {p.featured && <span className="price-card__badge">RECOMMENDED</span>}
+                  <h3>{p.name}</h3>
+                  <p className="price-card__tag">{p.tag}</p>
+                  <div className="price-card__price">
+                    {p.price}<span className="price-card__per"> {p.per}</span>
+                  </div>
+                  <ul className="price-card__list">
+                    {p.features.map((feat) => (
+                      <li key={feat}><IconCheckSmall /> {feat}</li>
+                    ))}
+                  </ul>
+                  <a
+                    href={USER_APP_URL}
+                    className={`btn ${p.featured ? 'btn-primary' : 'btn-secondary'}`}
+                  >
+                    {p.cta}
+                  </a>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* FAQ */}
+        <section id="faq" className="section">
+          <div className="container">
+            <div className="section-head">
+              <h2>Frequently asked questions</h2>
+              <p>Everything you need to know before you get started.</p>
+            </div>
+            <Faq />
+          </div>
+        </section>
+
+        {/* Final CTA */}
+        <section className="section">
+          <div className="container">
+            <div className="cta-banner">
+              <h2>Ready to get your team organized?</h2>
+              <p>Start free in seconds. No credit card, no setup, no clutter.</p>
+              <a href={USER_APP_URL} className="btn btn-on-dark btn-lg">Get started free</a>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      {/* Footer */}
+      <footer className="site-footer">
+        <div className="container">
+          <div className="footer-grid">
+            <div className="footer-brand">
+              <span className="brand">
+                <span className="brand__mark"><IconBrand /></span>
+                Trello Clone
+              </span>
+              <p>The simple, fast way to organize projects and collaborate with your team.</p>
+            </div>
+            {Object.entries(FOOTER).map(([heading, links]) => (
+              <div className="footer-col" key={heading}>
+                <h4>{heading}</h4>
+                <ul>
+                  {links.map((l) => (
+                    <li key={l}><a href="#top">{l}</a></li>
                   ))}
                 </ul>
-                <div style={{ marginTop: space.lg }}>
-                  <Cta primary={p.highlight}>Choose {p.name}</Cta>
-                </div>
               </div>
             ))}
           </div>
+          <div className="footer-bottom">
+            <p>© {new Date().getFullYear()} Trello Clone. Built as a demo.</p>
+            <div className="footer-social">
+              <a href="#top" aria-label="X (Twitter)"><IconX /></a>
+              <a href="#top" aria-label="GitHub"><IconGithub /></a>
+              <a href="#top" aria-label="LinkedIn"><IconLinkedin /></a>
+            </div>
+          </div>
         </div>
-      </section>
-
-      {/* Final CTA */}
-      <section style={{ background: color.navyDeep, color: color.white, padding: `${space.max} ${space.xl}`, textAlign: 'center' }}>
-        <h2 style={{ fontSize: 38, marginBottom: space.base }}>Ready to get organized?</h2>
-        <p style={{ color: '#C7D1E0', fontSize: 18, marginBottom: space.xl }}>
-          Start free. No credit card required.
-        </p>
-        <Cta primary>Get started</Cta>
-      </section>
-
-      <footer style={{ padding: `${space.lg} ${space.xl}`, textAlign: 'center', color: color.navyLight, fontSize: 14 }}>
-        © {new Date().getFullYear()} Trello Clone. Built as a demo.
       </footer>
-    </main>
+    </>
+  );
+}
+
+function BoardMock() {
+  return (
+    <div className="board-mock" aria-hidden="true">
+      <div className="board-mock__bar">
+        <span className="board-mock__dot" />
+        <span className="board-mock__dot" />
+        <span className="board-mock__dot" />
+        <span className="board-mock__title">Product Roadmap</span>
+      </div>
+      <div className="board-mock__lists">
+        <div className="mock-list">
+          <div className="mock-list__head">To do</div>
+          <div className="mock-card"><span className="mock-label" style={{ background: color.purple }} />Design landing page</div>
+          <div className="mock-card"><span className="mock-label" style={{ background: color.cyan }} />Write release notes</div>
+          <div className="mock-card">Plan Q3 sprint</div>
+        </div>
+        <div className="mock-list">
+          <div className="mock-list__head">In progress</div>
+          <div className="mock-card mock-card__lift"><span className="mock-label" style={{ background: color.blue }} />Build API endpoints</div>
+          <div className="mock-card"><span className="mock-label" style={{ background: color.green }} />User testing</div>
+        </div>
+        <div className="mock-list">
+          <div className="mock-list__head">Done</div>
+          <div className="mock-card"><span className="mock-label" style={{ background: color.green }} />Setup CI/CD</div>
+          <div className="mock-card"><span className="mock-label" style={{ background: color.blueDark }} />Auth flow</div>
+        </div>
+      </div>
+    </div>
   );
 }

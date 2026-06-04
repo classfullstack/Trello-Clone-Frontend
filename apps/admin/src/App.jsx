@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth, usePermission, Spinner } from '@trello/ui';
+import { useAuth, usePermission, Spinner, color } from '@trello/ui';
 import { SYSTEM_ROLES } from './lib/api';
 import { Layout } from './components/Layout';
 import { RequirePermission, NotAuthorized } from './components/RequirePermission';
@@ -13,7 +13,13 @@ export function App() {
   const { user, loading, logout } = useAuth();
   const { hasRole } = usePermission();
 
-  if (loading) return <Spinner />;
+  if (loading) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: color.offWhite }}>
+        <Spinner size={32} />
+      </div>
+    );
+  }
   if (!user) {
     return (
       <Routes>

@@ -55,3 +55,34 @@ export const font = {
 };
 
 export const focusRing = `0px 0px 0px 3px rgba(24, 104, 219, 0.15)`;
+
+export const breakpoint = {
+  mobile: '767px',
+  tablet: '1023px',
+  desktop: '1279px',
+};
+
+// Curated palette for board backgrounds and label chips.
+export const boardBackgrounds = [
+  'linear-gradient(135deg, #1868DB 0%, #0747A6 100%)',
+  'linear-gradient(135deg, #A855F7 0%, #6D28D9 100%)',
+  'linear-gradient(135deg, #06B6D4 0%, #0E7490 100%)',
+  'linear-gradient(135deg, #0EA47A 0%, #086650 100%)',
+  'linear-gradient(135deg, #E8590C 0%, #BD3A00 100%)',
+  'linear-gradient(135deg, #C9372C 0%, #8E1A12 100%)',
+  'linear-gradient(135deg, #172B4D 0%, #091E42 100%)',
+  'linear-gradient(135deg, #F2994A 0%, #DB6F26 100%)',
+];
+
+export const labelColors = {
+  green: '#4BCE97',
+  yellow: '#F5CD47',
+  orange: '#FEA362',
+  red: '#F87168',
+  purple: '#9F8FEF',
+  blue: '#579DFF',
+  sky: '#6CC3E0',
+  lime: '#94C748',
+  pink: '#E774BB',
+  gray: '#8590A2',
+};

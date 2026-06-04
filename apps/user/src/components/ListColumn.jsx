@@ -31,8 +31,14 @@ export function ListColumn({ list, cards, onAddCard, onCardClick }) {
         flexDirection: 'column',
       }}
     >
-      <div style={{ fontFamily: font.text, fontWeight: 600, fontSize: 14, color: color.navyDeep, padding: '4px 8px' }}>
-        {list.name}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        fontFamily: font.text, fontWeight: 600, fontSize: 14, color: color.navyDeep, padding: '4px 8px',
+      }}>
+        <span>{list.name}</span>
+        {cards.length > 0 && (
+          <span style={{ fontSize: 12, fontWeight: 500, color: color.navyLight }}>{cards.length}</span>
+        )}
       </div>
 
       <div ref={setNodeRef} style={{ overflowY: 'auto', flex: 1, minHeight: 8, padding: '4px 0' }}>

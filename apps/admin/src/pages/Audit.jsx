@@ -1,45 +1,62 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Button, Input, Badge, color, space, font } from '@trello/ui';
+import { Button, Input, Tooltip, useToast, color, space, font, radius } from '@trello/ui';
 import { api } from '../lib/api';
-import { PageTitle } from '../components/Layout';
-import { Table } from '../components/Table';
+import { PageHeader } from '../components/Layout';
+import { Table, Pagination } from '../components/Table';
+import { IconDownload } from '../components/icons';
 
+const PAGE_SIZE = 25;
 const EMPTY = { actor: '', action: '', from: '', to: '' };
 
-function toParams(f) {
+function toParams(f, page) {
   return {
     actor: f.actor || undefined,
     action: f.action || undefined,
     from: f.from || undefined,
     to: f.to || undefined,
+    page,
+    pageSize: PAGE_SIZE,
   };
 }
 
+function metaText(m) {
+  if (!m) return '';
+  if (typeof m === 'string') return m;
+  try { return JSON.stringify(m); } catch { return String(m); }
+}
+
 function toCsv(rows) {
-  const head = ['id', 'actor', 'action', 'target', 'decision', 'ip', 'createdAt'];
+  const head = ['id', 'actor', 'action', 'target', 'ip', 'metadata', 'createdAt'];
   const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const lines = rows.map((r) =>
-    [r.id, r.actorEmail ?? r.actor, r.action, r.target, r.decision, r.ip, r.createdAt].map(esc).join(',')
+    [r.id, r.actorEmail ?? r.actorId, r.action, r.targetId, r.ipAddress, metaText(r.metadata), r.createdAt].map(esc).join(',')
   );
   return [head.join(','), ...lines].join('\n');
 }
 
 export function AuditPage() {
+  const toast = useToast();
   const [draft, setDraft] = useState(EMPTY);
   const [applied, setApplied] = useState(EMPTY);
+  const [page, setPage] = useState(1);
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['admin', 'audit', applied],
+    queryKey: ['admin', 'audit', applied, page],
     queryFn: async () => {
-      const res = await api.get('/admin/audit', { params: toParams(applied) });
-      return Array.isArray(res.data) ? res.data : res.data?.data ?? [];
+      const res = await api.get('/admin/audit', { params: toParams(applied, page) });
+      return Array.isArray(res.data) ? { data: res.data, total: res.data.length } : res.data;
     },
   });
 
-  const rows = data ?? [];
+  const rows = data?.data ?? [];
+  const total = data?.total ?? 0;
+
+  const apply = () => { setApplied(draft); setPage(1); };
+  const reset = () => { setDraft(EMPTY); setApplied(EMPTY); setPage(1); };
 
   const exportCsv = () => {
+    if (rows.length === 0) return;
     const blob = new Blob([toCsv(rows)], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -47,57 +64,85 @@ export function AuditPage() {
     a.download = `audit-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+    toast.success(`Exported ${rows.length} rows.`);
   };
 
-  const field = { display: 'flex', flexDirection: 'column', gap: 4 };
-  const labelStyle = { fontSize: 12, color: color.darkGray, fontFamily: font.text };
-
   const columns = [
-    { key: 'createdAt', header: 'Time', render: (r) => r.createdAt ? new Date(r.createdAt).toLocaleString() : '—' },
-    { key: 'actor', header: 'Actor', render: (r) => r.actorEmail ?? r.actor ?? '—' },
-    { key: 'action', header: 'Action', render: (r) => <span style={{ fontFamily: font.mono, fontSize: 13 }}>{r.action}</span> },
-    { key: 'target', header: 'Target', render: (r) => r.target ?? '—' },
-    { key: 'decision', header: 'Decision', render: (r) => (
-      <Badge kind={r.decision === 'DENY' ? 'error' : 'success'}>{r.decision ?? 'ALLOW'}</Badge>
-    ) },
-    { key: 'ip', header: 'IP', render: (r) => r.ip ?? '—' },
+    {
+      key: 'createdAt', header: 'Time', width: 170,
+      render: (r) => r.createdAt
+        ? <span style={{ color: color.navyMedium }}>{new Date(r.createdAt).toLocaleString()}</span>
+        : '—',
+    },
+    { key: 'actor', header: 'Actor', render: (r) => <span style={{ fontWeight: 500 }}>{r.actorEmail ?? r.actorId ?? '—'}</span> },
+    {
+      key: 'action', header: 'Action',
+      render: (r) => (
+        <span style={{
+          fontFamily: font.mono, fontSize: 12, background: color.offWhite,
+          padding: '2px 8px', borderRadius: radius.base, color: color.navyMedium,
+        }}>{r.action}</span>
+      ),
+    },
+    { key: 'targetId', header: 'Target', render: (r) => <span style={{ color: color.navyLight }}>{r.targetId ?? '—'}</span> },
+    { key: 'ipAddress', header: 'IP', width: 130, render: (r) => <span style={{ fontFamily: font.mono, fontSize: 12, color: color.navyLight }}>{r.ipAddress ?? '—'}</span> },
+    {
+      key: 'metadata', header: 'Metadata',
+      render: (r) => {
+        const t = metaText(r.metadata);
+        if (!t) return <span style={{ color: color.mediumGray }}>—</span>;
+        const short = t.length > 40 ? `${t.slice(0, 40)}…` : t;
+        return (
+          <Tooltip label={t}>
+            <span style={{ fontFamily: font.mono, fontSize: 12, color: color.navyLight, cursor: 'help' }}>{short}</span>
+          </Tooltip>
+        );
+      },
+    },
   ];
+
+  const field = { display: 'flex', flexDirection: 'column', gap: 4 };
+  const labelStyle = { fontSize: 12, fontWeight: 600, color: color.darkGray, fontFamily: font.text };
 
   return (
     <div>
-      <PageTitle
+      <PageHeader
         title="Audit Log"
         subtitle="Sensitive actions and access decisions"
-        action={<Button variant="secondary" onClick={exportCsv} disabled={rows.length === 0}>Export CSV</Button>}
+        breadcrumb={['Admin', 'Audit Log']}
+        action={
+          <Button variant="secondary" onClick={exportCsv} disabled={rows.length === 0}
+            leftIcon={<IconDownload size={16} />}>Export CSV</Button>
+        }
       />
 
       <div style={{
         display: 'flex', gap: space.base, flexWrap: 'wrap', alignItems: 'flex-end',
         marginBottom: space.base, background: color.white, padding: space.base,
-        border: `1px solid ${color.border}`, borderRadius: 8,
+        border: `1px solid ${color.border}`, borderRadius: radius.large,
       }}>
         <div style={field}>
           <label style={labelStyle}>Actor</label>
-          <Input style={{ minHeight: 40, width: 200 }} placeholder="email or id"
-            value={draft.actor} onChange={(e) => setDraft({ ...draft, actor: e.target.value })} />
+          <Input style={{ width: 200 }} placeholder="email or id"
+            value={draft.actor} onChange={(e) => setDraft({ ...draft, actor: e.target.value })}
+            onKeyDown={(e) => e.key === 'Enter' && apply()} />
         </div>
         <div style={field}>
           <label style={labelStyle}>Action</label>
-          <Input style={{ minHeight: 40, width: 200 }} placeholder="e.g. users.suspend"
-            value={draft.action} onChange={(e) => setDraft({ ...draft, action: e.target.value })} />
+          <Input style={{ width: 200 }} placeholder="e.g. users.suspend"
+            value={draft.action} onChange={(e) => setDraft({ ...draft, action: e.target.value })}
+            onKeyDown={(e) => e.key === 'Enter' && apply()} />
         </div>
         <div style={field}>
           <label style={labelStyle}>From</label>
-          <Input type="date" style={{ minHeight: 40 }}
-            value={draft.from} onChange={(e) => setDraft({ ...draft, from: e.target.value })} />
+          <Input type="date" value={draft.from} onChange={(e) => setDraft({ ...draft, from: e.target.value })} />
         </div>
         <div style={field}>
           <label style={labelStyle}>To</label>
-          <Input type="date" style={{ minHeight: 40 }}
-            value={draft.to} onChange={(e) => setDraft({ ...draft, to: e.target.value })} />
+          <Input type="date" value={draft.to} onChange={(e) => setDraft({ ...draft, to: e.target.value })} />
         </div>
-        <Button onClick={() => setApplied(draft)} style={{ minHeight: 40 }}>Filter</Button>
-        <Button variant="ghost" onClick={() => { setDraft(EMPTY); setApplied(EMPTY); }} style={{ minHeight: 40 }}>Reset</Button>
+        <Button onClick={apply}>Apply filters</Button>
+        <Button variant="ghost" onClick={reset}>Reset</Button>
       </div>
 
       <Table
@@ -105,9 +150,13 @@ export function AuditPage() {
         rows={rows}
         rowKey={(r) => r.id}
         loading={isLoading}
-        error={isError ? 'Failed to load audit log (endpoint may not exist yet).' : null}
-        empty="No audit entries match."
+        error={isError ? 'Failed to load audit log. The endpoint may not be available yet.' : null}
+        empty="No audit entries"
+        emptyDescription="No records match the current filters."
+        emptyIcon="📋"
       />
+
+      <Pagination page={page} pageSize={PAGE_SIZE} total={total} onPage={setPage} />
     </div>
   );
 }

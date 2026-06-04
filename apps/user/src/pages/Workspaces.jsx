@@ -1,28 +1,37 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Button, Input, Card, Spinner, color, font, space } from '@trello/ui';
+import {
+  Button, Input, Modal, Card, Avatar, Spinner, Skeleton, EmptyState, useToast,
+  color, font, space, radius, shadow, boardBackgrounds,
+} from '@trello/ui';
 import { api } from '../lib/api';
 
 async function fetchWorkspaces() {
   const res = await api.get('/workspaces');
-  return Array.isArray(res.data) ? res.data : res.data?.items ?? [];
+  return Array.isArray(res.data) ? res.data : res.data?.items ?? res.data?.data ?? [];
 }
 
 export function Workspaces() {
   const qc = useQueryClient();
+  const toast = useToast();
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
+
   const { data, isLoading, isError } = useQuery({ queryKey: ['workspaces'], queryFn: fetchWorkspaces });
 
   const create = useMutation({
     mutationFn: (n) => api.post('/workspaces', { name: n }),
     onSuccess: () => {
-      setName('');
+      setName(''); setOpen(false);
+      toast.success('Workspace created.');
       qc.invalidateQueries({ queryKey: ['workspaces'] });
     },
+    onError: () => toast.error('Could not create workspace.'),
   });
 
-  const onSubmit = (e) => {
+  const submit = (e) => {
     e.preventDefault();
     if (name.trim()) create.mutate(name.trim());
   };
@@ -30,42 +39,95 @@ export function Workspaces() {
   const workspaces = data ?? [];
 
   return (
-    <div style={{ maxWidth: 1000, margin: '0 auto', padding: space.xl }}>
-      <h1 style={{ fontFamily: font.display, fontSize: 24, fontWeight: 500, color: color.navyDeep }}>
-        Your Workspaces
-      </h1>
+    <div style={{ maxWidth: 1080, margin: '0 auto', padding: `${space.xl} ${space.base}` }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: space.base, marginBottom: space.lg }}>
+        <div>
+          <h1 style={{ fontFamily: font.display, fontSize: 28, fontWeight: 700, color: color.navyDeep, margin: 0 }}>
+            Your Workspaces
+          </h1>
+          <p style={{ fontFamily: font.text, fontSize: 14, color: color.navyLight, margin: `${space.xs} 0 0` }}>
+            Group boards by team or project.
+          </p>
+        </div>
+        <Button leftIcon="+" onClick={() => setOpen(true)}>Create workspace</Button>
+      </div>
 
-      <form onSubmit={onSubmit} style={{ display: 'flex', gap: space.sm, maxWidth: 480, marginBottom: space.xl }}>
-        <Input placeholder="New workspace name" value={name} onChange={(e) => setName(e.target.value)} />
-        <Button type="submit" disabled={create.isPending} style={{ whiteSpace: 'nowrap' }}>
-          Create
-        </Button>
-      </form>
-
-      {isLoading && <Spinner />}
-      {isError && <EmptyState text="Could not load workspaces. Is the backend running?" />}
-      {!isLoading && !isError && workspaces.length === 0 && (
-        <EmptyState text="No workspaces yet. Create your first one above." />
+      {isLoading && (
+        <div style={gridStyle}>
+          {[0, 1, 2].map((i) => <Skeleton key={i} height={120} radius={radius.large} />)}
+        </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: space.base }}>
-        {workspaces.map((w) => (
-          <Link key={w.id} to={`/w/${w.id}`} style={{ textDecoration: 'none' }}>
-            <Card style={{ cursor: 'pointer' }}>
-              <div style={{ fontFamily: font.display, fontSize: 18, fontWeight: 500, color: color.navyDeep }}>
-                {w.name}
-              </div>
-              <div style={{ fontSize: 13, color: color.navyLight, marginTop: 4 }}>Open boards →</div>
-            </Card>
-          </Link>
-        ))}
-      </div>
+      {isError && (
+        <EmptyState icon="⚠️" title="Could not load workspaces"
+          description="The backend may be offline. Try again in a moment."
+          action={<Button variant="secondary" onClick={() => qc.invalidateQueries({ queryKey: ['workspaces'] })}>Retry</Button>} />
+      )}
+
+      {!isLoading && !isError && workspaces.length === 0 && (
+        <Card style={{ padding: 0 }}>
+          <EmptyState icon="🗂️" title="No workspaces yet"
+            description="Create your first workspace to start organizing boards."
+            action={<Button leftIcon="+" onClick={() => setOpen(true)}>Create workspace</Button>} />
+        </Card>
+      )}
+
+      {!isLoading && !isError && workspaces.length > 0 && (
+        <div style={gridStyle}>
+          {workspaces.map((w, i) => (
+            <WorkspaceCard key={w.id} ws={w} grad={boardBackgrounds[i % boardBackgrounds.length]}
+              onClick={() => navigate(`/w/${w.id}`)} />
+          ))}
+        </div>
+      )}
+
+      <Modal
+        open={open} onClose={() => setOpen(false)} title="Create workspace" size="sm"
+        footer={<>
+          <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button onClick={submit} loading={create.isPending} disabled={!name.trim()}>Create</Button>
+        </>}
+      >
+        <form onSubmit={submit}>
+          <Input label="Workspace name" autoFocus placeholder="e.g. Marketing Team"
+            value={name} onChange={(e) => setName(e.target.value)} />
+        </form>
+      </Modal>
     </div>
   );
 }
 
-function EmptyState({ text }) {
+const gridStyle = {
+  display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: space.base,
+};
+
+function WorkspaceCard({ ws, grad, onClick }) {
+  const [hover, setHover] = useState(false);
   return (
-    <div style={{ padding: space.xl, color: color.navyLight, fontSize: 15, textAlign: 'center' }}>{text}</div>
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        textAlign: 'left', padding: 0, cursor: 'pointer', borderRadius: radius.large,
+        overflow: 'hidden', background: color.white, boxShadow: hover ? shadow.hover : shadow.subtle,
+        transform: hover ? 'translateY(-2px)' : 'none', transition: 'box-shadow .15s, transform .15s',
+        border: `1px solid ${color.border}`,
+      }}
+    >
+      <div style={{ height: 72, background: grad }} />
+      <div style={{ padding: space.base, display: 'flex', alignItems: 'center', gap: space.md }}>
+        <Avatar name={ws.name} size={40} style={{ borderRadius: radius.large, marginTop: -36, border: `3px solid ${color.white}` }} />
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontFamily: font.display, fontSize: 16, fontWeight: 600, color: color.navyDeep, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {ws.name}
+          </div>
+          <div style={{ fontFamily: font.text, fontSize: 13, color: color.navyLight }}>
+            {ws.boardCount != null ? `${ws.boardCount} board${ws.boardCount === 1 ? '' : 's'}` : 'Open boards'}
+            {ws.role ? ` · ${ws.role}` : ''}
+          </div>
+        </div>
+      </div>
+    </button>
   );
 }
