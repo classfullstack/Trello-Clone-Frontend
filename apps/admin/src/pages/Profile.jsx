@@ -5,7 +5,7 @@ import {
   color, space, font,
 } from '@trello/ui';
 import { UploadCloud } from 'lucide-react';
-import { api } from '../lib/api';
+import { api, meProfile } from '../lib/api';
 import { PageHeader } from '../components/Layout';
 
 function SectionTitle({ children }) {
@@ -17,7 +17,8 @@ function SectionTitle({ children }) {
 }
 
 export function ProfilePage() {
-  const { user, refresh } = useAuth();
+  const { user: rawUser, refresh } = useAuth();
+  const user = meProfile(rawUser);
   const toast = useToast();
   const fileRef = useRef(null);
 

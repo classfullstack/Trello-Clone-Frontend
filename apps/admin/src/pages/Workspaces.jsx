@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Badge, Avatar, IconButton, Dropdown, MenuItem, Button, Modal, Input, Select,
@@ -17,6 +18,7 @@ function fmtDate(d) {
 
 export function WorkspacesPage() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const { can } = usePermission();
   const toast = useToast();
   const confirm = useConfirm();
@@ -105,9 +107,12 @@ export function WorkspacesPage() {
   const columns = [
     {
       key: 'name', header: 'Workspace', render: (w) => (
-        <div style={{ display: 'flex', alignItems: 'center', gap: space.md }}>
+        <div
+          onClick={() => navigate(`/workspaces/${w.id}`)}
+          style={{ display: 'flex', alignItems: 'center', gap: space.md, cursor: 'pointer' }}
+        >
           <Avatar name={w.name} size={32} style={{ borderRadius: 6 }} />
-          <span style={{ fontWeight: 600, color: color.text }}>{w.name}</span>
+          <span style={{ fontWeight: 600, color: color.blue }}>{w.name}</span>
           {w.isLocked && (
             <span title="Locked" style={{ display: 'inline-flex', color: color.danger }}><Lock size={14} /></span>
           )}

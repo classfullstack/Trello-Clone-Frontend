@@ -1,20 +1,25 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
-  useAuth, Avatar, Dropdown, MenuItem, MenuDivider, IconButton, ThemeToggle,
+  useAuth, usePermission, useTheme, Avatar, Dropdown, MenuItem, MenuDivider, IconButton, ThemeToggle,
   color, space, font, radius, shadow,
 } from '@trello/ui';
 import {
   LayoutDashboard, Users, KanbanSquare, ScrollText, HardDrive,
-  LogOut, Shield, Menu, Search, User, Settings,
+  LogOut, Shield, Menu, Search, User, Settings, ShieldCheck, Activity, SlidersHorizontal,
 } from 'lucide-react';
+import { meProfile } from '../lib/api';
 
+// `perm`/`role` gate visibility via usePermission; undefined = always visible.
 const NAV = [
   { to: '/dashboard', label: 'Dashboard', Icon: LayoutDashboard },
   { to: '/users', label: 'Users', Icon: Users },
   { to: '/workspaces', label: 'Workspaces', Icon: KanbanSquare },
-  { to: '/storage', label: 'Storage', Icon: HardDrive },
-  { to: '/audit', label: 'Audit Log', Icon: ScrollText },
+  { to: '/roles', label: 'Roles & Permissions', Icon: ShieldCheck, role: 'super_admin' },
+  { to: '/storage', label: 'Storage', Icon: HardDrive, perm: 'storage.view' },
+  { to: '/monitoring', label: 'Monitoring', Icon: Activity },
+  { to: '/audit', label: 'Audit Log', Icon: ScrollText, perm: 'system.view_audit_log' },
+  { to: '/system', label: 'System Settings', Icon: SlidersHorizontal, role: 'super_admin' },
 ];
 
 const SIDEBAR_W = 248;
@@ -22,6 +27,12 @@ const SIDEBAR_W = 248;
 const SIDEBAR_BG = '#0B1626';
 
 function SidebarContent({ onNavigate }) {
+  const { can, hasRole } = usePermission();
+  const items = NAV.filter((n) => {
+    if (n.role && !hasRole(n.role)) return false;
+    if (n.perm && !can(n.perm)) return false;
+    return true;
+  });
   return (
     <>
       <div style={{
@@ -40,7 +51,7 @@ function SidebarContent({ onNavigate }) {
         </span>
       </div>
       <nav style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: `0 ${space.md}` }}>
-        {NAV.map(({ to, label, Icon }) => (
+        {items.map(({ to, label, Icon }) => (
           <NavLink
             key={to}
             to={to}
@@ -76,7 +87,9 @@ function SidebarContent({ onNavigate }) {
 }
 
 export function Layout({ children }) {
-  const { user, logout } = useAuth();
+  const { user: rawUser, logout } = useAuth();
+  const { resolved } = useTheme();
+  const user = meProfile(rawUser);
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -132,8 +145,13 @@ export function Layout({ children }) {
                 background: 'transparent', border: 'none', padding: '4px 6px', borderRadius: radius.large,
               }}>
                 <Avatar name={user?.name} email={user?.email} src={user?.avatarUrl} size={32} />
-                <span className="admin-email" style={{ color: color.text, fontSize: 14, fontWeight: 500 }}>
-                  {user?.email}
+                <span className="admin-email" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', lineHeight: 1.2 }}>
+                  <span style={{ color: color.text, fontSize: 14, fontWeight: 600, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {user?.name || 'Administrator'}
+                  </span>
+                  <span style={{ color: color.textMuted, fontSize: 12, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {user?.email}
+                  </span>
                 </span>
               </button>
             }>
@@ -160,6 +178,7 @@ export function Layout({ children }) {
       </div>
 
       <style>{`
+        :root { color-scheme: ${resolved}; }
         @media (max-width: 1023px) {
           .admin-sidebar { display: none !important; }
           .admin-content { margin-left: 0 !important; }

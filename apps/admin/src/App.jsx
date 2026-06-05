@@ -8,6 +8,10 @@ import { LoginPage } from './pages/Login';
 import { DashboardPage } from './pages/Dashboard';
 import { UsersPage } from './pages/Users';
 import { WorkspacesPage } from './pages/Workspaces';
+import { WorkspaceDetailPage } from './pages/WorkspaceDetail';
+import { RolesPage } from './pages/Roles';
+import { MonitoringPage } from './pages/Monitoring';
+import { SystemSettingsPage } from './pages/SystemSettings';
 import { StoragePage } from './pages/Storage';
 import { AuditPage } from './pages/Audit';
 import { ProfilePage } from './pages/Profile';
@@ -49,6 +53,31 @@ export function App() {
           element={
             <RequirePermission role={['super_admin', 'admin']}>
               <WorkspacesPage />
+            </RequirePermission>
+          }
+        />
+        <Route
+          path="/workspaces/:id"
+          element={
+            <RequirePermission role={['super_admin', 'admin']}>
+              <WorkspaceDetailPage />
+            </RequirePermission>
+          }
+        />
+        <Route
+          path="/roles"
+          element={
+            <RequirePermission role="super_admin">
+              <RolesPage />
+            </RequirePermission>
+          }
+        />
+        <Route path="/monitoring" element={<MonitoringPage />} />
+        <Route
+          path="/system"
+          element={
+            <RequirePermission role="super_admin">
+              <SystemSettingsPage />
             </RequirePermission>
           }
         />
