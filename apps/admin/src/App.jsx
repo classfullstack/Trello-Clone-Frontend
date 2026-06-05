@@ -1,10 +1,12 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth, usePermission, Spinner, color } from '@trello/ui';
-import { SYSTEM_ROLES } from './lib/api';
+import { SYSTEM_ROLES, api } from './lib/api';
 import { useThemeSync } from './lib/settings';
 import { Layout } from './components/Layout';
 import { RequirePermission, NotAuthorized } from './components/RequirePermission';
 import { LoginPage } from './pages/Login';
+import { SetupPage } from './pages/Setup';
 import { DashboardPage } from './pages/Dashboard';
 import { UsersPage } from './pages/Users';
 import { WorkspacesPage } from './pages/Workspaces';
@@ -25,6 +27,14 @@ export function App() {
 
   useThemeSync(!!user);
 
+  // First-run check: only when not logged in.
+  const setupQ = useQuery({
+    queryKey: ['setup-status'],
+    queryFn: async () => (await api.get('/auth/setup-status')).data,
+    enabled: !loading && !user,
+    staleTime: 60_000,
+  });
+
   if (loading) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: color.surfaceAlt }}>
@@ -33,6 +43,14 @@ export function App() {
     );
   }
   if (!user) {
+    if (setupQ.isLoading) {
+      return (
+        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: color.surfaceAlt }}>
+          <Spinner size={32} />
+        </div>
+      );
+    }
+    if (setupQ.data?.needsSetup) return <SetupPage />;
     return (
       <Routes>
         <Route path="/login" element={<LoginPage />} />
