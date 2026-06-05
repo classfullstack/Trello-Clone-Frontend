@@ -283,7 +283,7 @@ export function LandingPage() {
   return (
     <div>
       {header}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: space.lg, maxWidth: 820, paddingBottom: 96 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: space.lg, maxWidth: 1200, paddingBottom: 96 }}>
         <SectionCard Icon={Tag} title="Brand" description="Product name shown across the site.">
           <Input label="Brand name" value={f.brand.name} onChange={(e) => setBrand('name', e.target.value)} placeholder="Trello" />
         </SectionCard>
