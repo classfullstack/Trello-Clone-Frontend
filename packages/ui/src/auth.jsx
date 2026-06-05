@@ -19,7 +19,15 @@ export function AuthProvider({ api, children }) {
   useEffect(() => {
     setOnAuthFail(() => { setAccessToken(null); setUser(null); });
     (async () => {
-      try { await loadMe(); } catch { /* not logged in */ }
+      // Boot: get a fresh access token from the refresh cookie FIRST, then load
+      // the profile. Avoids a noisy 401 on /me for already-logged-in users.
+      try {
+        const res = await api.post('/auth/renew');
+        if (res.data?.accessToken) {
+          setAccessToken(res.data.accessToken);
+          await loadMe();
+        }
+      } catch { /* no valid session — stay logged out */ }
       setLoading(false);
     })();
   }, []);
