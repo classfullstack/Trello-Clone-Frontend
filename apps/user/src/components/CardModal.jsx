@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Plus, Trash2, Pencil, X, Archive, Paperclip, Download, Image as ImageIcon,
-  FileText, Activity as ActivityIcon, Copy, Eye, EyeOff,
+  FileText, Activity as ActivityIcon, Copy, Eye, EyeOff, Check,
 } from 'lucide-react';
 import {
   Modal, Button, Input, Textarea, Avatar, LabelChip, Spinner, IconButton, useConfirm,
@@ -14,6 +14,7 @@ import {
   useAttachments, useUploadAttachment, useDeleteAttachment, useDownloadAttachment,
   useCardActivity, useDuplicateCard, useWatchCard,
   useBoardMembers, useAddCardMember, useRemoveCardMember, useSetCardFieldValue,
+  useCreateBoardLabel, useDeleteBoardLabel,
 } from '../lib/boardData';
 import { MentionInput } from './MentionInput';
 
@@ -138,38 +139,79 @@ function Checklist({ checklist, cardId }) {
   );
 }
 
+const LABEL_SWATCHES = ['#4C6B1F', '#C9372C', '#1868DB', '#A855F7', '#06B6D4', '#E2B203', '#505F79', '#0C9488'];
+
 function LabelsEditor({ boardId, card, boardLabels }) {
   const confirm = useConfirm();
   const add = useAddCardLabel(boardId, card.id);
   const remove = useRemoveCardLabel(boardId, card.id);
+  const createLabel = useCreateBoardLabel(boardId);
+  const deleteLabel = useDeleteBoardLabel(boardId);
+  const [picking, setPicking] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newColor, setNewColor] = useState(LABEL_SWATCHES[0]);
   const applied = card.labels ?? [];
   const appliedIds = new Set(applied.map((l) => l.id));
 
   const onRemove = async (l) => {
-    const ok = await confirm({ title: 'Remove label?', message: 'This cannot be undone.', confirmText: 'Remove', danger: true });
+    const ok = await confirm({ title: 'Remove label?', message: 'Remove this label from the card?', confirmText: 'Remove', danger: true });
     if (ok) remove.mutate(l.id);
+  };
+  const onDeleteLabel = async (l) => {
+    const ok = await confirm({ title: 'Delete label?', message: 'Deletes it from the whole board.', confirmText: 'Delete', danger: true });
+    if (ok) deleteLabel.mutate(l.id);
+  };
+  const onCreate = () => {
+    const name = newName.trim();
+    if (!name) return;
+    createLabel.mutate({ name, color: newColor }, { onSuccess: () => setNewName('') });
   };
 
   return (
     <div>
-      <div style={sectionLabel}>Labels</div>
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
+      <div style={{ ...sectionLabel, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span>Labels</span>
+        <IconButton label="Manage labels" size={22} onClick={() => setPicking((v) => !v)}><Plus size={14} /></IconButton>
+      </div>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: applied.length ? 6 : 0 }}>
         {applied.map((l) => (
           <span key={l.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
             <LabelChip color={l.color} name={l.name} />
             <IconButton label="Remove label" size={20} onClick={() => onRemove(l)}><X size={12} /></IconButton>
           </span>
         ))}
-        {applied.length === 0 && <span style={{ fontSize: 13, color: color.textMuted }}>No labels.</span>}
+        {applied.length === 0 && !picking && <span style={{ fontSize: 13, color: color.textMuted }}>No labels. Click + to add.</span>}
       </div>
-      {boardLabels.length > 0 && (
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {boardLabels.filter((l) => !appliedIds.has(l.id)).map((l) => (
-            <button key={l.id} onClick={() => add.mutate(l.id)}
-              style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: 0 }} aria-label={`Add label ${l.name}`}>
-              <LabelChip color={l.color} name={l.name} />
-            </button>
-          ))}
+
+      {picking && (
+        <div style={{ border: `1px solid ${color.border}`, borderRadius: radius.large, padding: space.sm, background: color.surfaceAlt, marginTop: 6 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: space.sm }}>
+            {boardLabels.length === 0 && <span style={{ fontSize: 12, color: color.textMuted }}>No board labels yet — create one below.</span>}
+            {boardLabels.map((l) => (
+              <div key={l.id} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <button onClick={() => (appliedIds.has(l.id) ? remove.mutate(l.id) : add.mutate(l.id))}
+                  style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, border: 'none', background: 'transparent', cursor: 'pointer', padding: 2, textAlign: 'left' }}>
+                  <LabelChip color={l.color} name={l.name} />
+                  {appliedIds.has(l.id) && <Check size={14} color={color.text} style={{ marginLeft: 'auto' }} />}
+                </button>
+                <IconButton label="Delete label" size={20} onClick={() => onDeleteLabel(l)}><Trash2 size={12} /></IconButton>
+              </div>
+            ))}
+          </div>
+          <div style={{ borderTop: `1px solid ${color.border}`, paddingTop: space.sm }}>
+            <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="New label name"
+              onKeyDown={(e) => e.key === 'Enter' && onCreate()} style={{ marginBottom: 6 }} />
+            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 8 }}>
+              {LABEL_SWATCHES.map((c) => (
+                <button key={c} onClick={() => setNewColor(c)} aria-label={`Color ${c}`}
+                  style={{ width: 22, height: 22, borderRadius: 4, background: c, cursor: 'pointer',
+                    border: newColor === c ? `2px solid ${color.text}` : `2px solid transparent` }} />
+              ))}
+            </div>
+            <Button size="sm" leftIcon={<Plus size={13} />} loading={createLabel.isPending} disabled={!newName.trim()} onClick={onCreate}>
+              Create label
+            </Button>
+          </div>
         </div>
       )}
     </div>
@@ -430,7 +472,7 @@ export function CardModal({ card, boardId, board, onClose }) {
 
   return (
     <Modal open={!!card} onClose={onClose} width={940} title={null} padded>
-      <style>{`@media (max-width:760px){.cm-grid{flex-direction:column}.cm-side{width:100%!important}}`}</style>
+      <style>{`@media (max-width:640px){.cm-grid{flex-direction:column}.cm-side{width:100%!important}}`}</style>
       {cover && (
         <div style={{ position: 'relative', marginBottom: space.lg }}>
           <img src={cover} alt="Card cover" style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: radius.large, display: 'block' }} />
