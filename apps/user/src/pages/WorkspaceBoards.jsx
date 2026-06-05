@@ -2,14 +2,14 @@ import { useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
-  ArrowLeft, Plus, MoreHorizontal, Pencil, Trash2, Archive, ArchiveRestore, Image, AlertTriangle, LayoutGrid,
+  ArrowLeft, Plus, MoreHorizontal, Pencil, Trash2, Archive, ArchiveRestore, Image, AlertTriangle, LayoutGrid, Star,
 } from 'lucide-react';
 import {
   Button, Input, Modal, Spinner, EmptyState, IconButton, Dropdown, MenuItem, useConfirm,
   color, font, space, shadow, radius, boardBackgrounds,
 } from '@trello/ui';
 import { api } from '../lib/api';
-import { useCreateBoard, useUpdateBoard, useDeleteBoard } from '../lib/wsData';
+import { useCreateBoard, useUpdateBoard, useDeleteBoard, useStarBoard } from '../lib/wsData';
 
 async function fetchBoards(workspaceId) {
   const res = await api.get('/boards', { params: { workspaceId } });
@@ -33,6 +33,7 @@ export function WorkspaceBoards() {
   const create = useCreateBoard(workspaceId);
   const update = useUpdateBoard(workspaceId);
   const remove = useDeleteBoard(workspaceId);
+  const star = useStarBoard(workspaceId);
 
   const onCreate = (e) => {
     e.preventDefault();
@@ -60,7 +61,7 @@ export function WorkspaceBoards() {
     update.mutate({ id: bgFor, patch: { background: bg } }, { onSuccess: () => setBgFor(null) });
   };
 
-  const boards = data ?? [];
+  const boards = [...(data ?? [])].sort((a, b) => (b.starred ? 1 : 0) - (a.starred ? 1 : 0));
 
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: `${space.xl} ${space.base}` }}>
@@ -93,6 +94,7 @@ export function WorkspaceBoards() {
             onChangeBg={() => setBgFor(b.id)}
             onArchive={() => onArchive(b)}
             onDelete={() => onDelete(b)}
+            onStar={() => star.mutate({ id: b.id, starred: !b.starred })}
           />
         ))}
       </div>
@@ -123,7 +125,7 @@ export function WorkspaceBoards() {
   );
 }
 
-function BoardCard({ board, grad, onOpen, onRename, onChangeBg, onArchive, onDelete }) {
+function BoardCard({ board, grad, onOpen, onRename, onChangeBg, onArchive, onDelete, onStar }) {
   return (
     <div style={{ position: 'relative' }}>
       <button
@@ -138,6 +140,13 @@ function BoardCard({ board, grad, onOpen, onRename, onChangeBg, onArchive, onDel
       >
         {board.name}{board.archived ? ' (archived)' : ''}
       </button>
+      <div style={{ position: 'absolute', top: 6, left: 6 }}>
+        <IconButton label={board.starred ? 'Unstar board' : 'Star board'}
+          style={{ background: 'rgba(0,0,0,0.28)', color: board.starred ? '#F2D600' : '#fff' }}
+          onClick={(e) => { e.stopPropagation(); onStar(); }}>
+          <Star size={16} fill={board.starred ? '#F2D600' : 'none'} />
+        </IconButton>
+      </div>
       <div style={{ position: 'absolute', top: 6, right: 6 }}>
         <Dropdown
           align="right" width={190}

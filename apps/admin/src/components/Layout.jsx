@@ -172,7 +172,7 @@ export function Layout({ children }) {
           </div>
         </header>
 
-        <main style={{ flex: 1, padding: space.xl, overflow: 'auto', maxWidth: 1280, width: '100%', boxSizing: 'border-box' }}>
+        <main style={{ flex: 1, padding: space.xl, overflow: 'auto', width: '100%', boxSizing: 'border-box' }}>
           {children}
         </main>
       </div>
