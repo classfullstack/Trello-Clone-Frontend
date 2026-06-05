@@ -1,10 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
-import { Card, Badge, Spinner, color, space, font, radius } from '@trello/ui';
+import { Card, Badge, color, space, font, radius } from '@trello/ui';
 import {
   Server, Database, Zap, HardDrive, Users, KanbanSquare, LayoutDashboard, Layers, MessageSquare, Wifi, Clock,
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { PageHeader } from '../components/Layout';
+import { CardGridSkeleton } from '../components/PageSkeleton';
 
 const SERVICES = [
   { key: 'api', label: 'API', Icon: Server },
@@ -117,7 +118,13 @@ export function MonitoringPage() {
       )}
 
       {isLoading ? (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: space.xxl }}><Spinner size={32} /></div>
+        <>
+          <h2 style={{ fontFamily: font.display, fontSize: 16, fontWeight: 700, color: color.text, marginBottom: space.md }}>Services</h2>
+          <div style={{ marginBottom: space.lg }}><CardGridSkeleton count={4} minWidth={220} height={28} /></div>
+          <div style={{ marginBottom: space.lg }}><CardGridSkeleton count={2} minWidth={220} height={28} /></div>
+          <h2 style={{ fontFamily: font.display, fontSize: 16, fontWeight: 700, color: color.text, marginBottom: space.md }}>Totals</h2>
+          <CardGridSkeleton count={5} minWidth={180} height={24} />
+        </>
       ) : (
         <>
           <h2 style={{ fontFamily: font.display, fontSize: 16, fontWeight: 700, color: color.text, marginBottom: space.md }}>Services</h2>

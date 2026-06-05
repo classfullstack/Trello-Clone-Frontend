@@ -70,7 +70,7 @@ export function Workspaces() {
 
       {isLoading && (
         <div style={gridStyle}>
-          {[0, 1, 2].map((i) => <Skeleton key={i} height={120} radius={radius.large} />)}
+          {[0, 1, 2].map((i) => <WorkspaceCardSkeleton key={i} />)}
         </div>
       )}
 
@@ -131,6 +131,21 @@ export function Workspaces() {
 const gridStyle = {
   display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: space.lg,
 };
+
+function WorkspaceCardSkeleton() {
+  return (
+    <div style={{ borderRadius: radius.large, overflow: 'hidden', background: color.surface, border: `1px solid ${color.border}`, boxShadow: shadow.subtle }}>
+      <Skeleton height={88} radius={0} />
+      <div style={{ padding: space.lg, display: 'flex', alignItems: 'center', gap: space.md }}>
+        <Skeleton width={52} height={52} radius={radius.large} style={{ marginTop: -44, flexShrink: 0 }} />
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: space.sm }}>
+          <Skeleton width="60%" height={16} />
+          <Skeleton width="40%" height={12} />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function WorkspaceCard({ ws, grad, onOpen, onRename, onDelete }) {
   const [hover, setHover] = useState(false);

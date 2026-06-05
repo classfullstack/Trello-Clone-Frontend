@@ -5,7 +5,7 @@ import {
   ArrowLeft, Plus, MoreHorizontal, Pencil, Trash2, Archive, ArchiveRestore, Image, AlertTriangle, LayoutGrid, Star, Users,
 } from 'lucide-react';
 import {
-  Button, Input, Modal, Spinner, EmptyState, IconButton, Dropdown, MenuItem, useConfirm,
+  Button, Input, Modal, Skeleton, EmptyState, IconButton, Dropdown, MenuItem, useConfirm,
   color, font, space, shadow, radius, boardBackgrounds,
 } from '@trello/ui';
 import { api } from '../lib/api';
@@ -81,7 +81,11 @@ export function WorkspaceBoards() {
         <Button type="submit" leftIcon={<Plus size={16} />} loading={create.isPending} disabled={!name.trim()} style={{ whiteSpace: 'nowrap' }}>Create</Button>
       </form>
 
-      {isLoading && <Spinner />}
+      {isLoading && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: space.lg }}>
+          {[0, 1, 2, 3].map((i) => <Skeleton key={i} height={120} radius={radius.large} />)}
+        </div>
+      )}
       {isError && (
         <EmptyState icon={<AlertTriangle size={36} />} title="Could not load boards"
           description="Try again in a moment."

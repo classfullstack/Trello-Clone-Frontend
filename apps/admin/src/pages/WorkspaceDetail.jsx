@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  Badge, Avatar, Button, Card, Modal, Input, Select, Spinner, EmptyState,
+  Badge, Avatar, Button, Card, Modal, Input, Select, EmptyState,
   usePermission, useToast, useConfirm, color, space, font, radius,
 } from '@trello/ui';
 import {
@@ -12,6 +12,7 @@ import { api } from '../lib/api';
 import { PageHeader } from '../components/Layout';
 import { Table } from '../components/Table';
 import { Alert } from '../components/ui';
+import { DetailSkeleton } from '../components/PageSkeleton';
 
 function fmtDate(d) {
   return d ? new Date(d).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '—';
@@ -117,7 +118,7 @@ export function WorkspaceDetailPage() {
     return (
       <div>
         <BackLink onClick={() => navigate('/workspaces')} />
-        <div style={{ display: 'flex', justifyContent: 'center', padding: space.xxl }}><Spinner size={32} /></div>
+        <DetailSkeleton />
       </div>
     );
   }

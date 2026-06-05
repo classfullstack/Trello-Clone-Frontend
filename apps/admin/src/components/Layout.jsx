@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   useAuth, usePermission, useTheme, Avatar, Dropdown, MenuItem, MenuDivider, IconButton, ThemeToggle,
   color, space, font, radius, shadow,
@@ -11,29 +11,73 @@ import {
 import { meProfile } from '../lib/api';
 
 // `perm`/`role` gate visibility via usePermission; undefined = always visible.
-const NAV = [
-  { to: '/dashboard', label: 'Dashboard', Icon: LayoutDashboard },
-  { to: '/users', label: 'Users', Icon: Users },
-  { to: '/workspaces', label: 'Workspaces', Icon: KanbanSquare },
-  { to: '/roles', label: 'Roles & Permissions', Icon: ShieldCheck, role: 'super_admin' },
-  { to: '/storage', label: 'Storage', Icon: HardDrive, perm: 'storage.view' },
-  { to: '/monitoring', label: 'Monitoring', Icon: Activity },
-  { to: '/audit', label: 'Audit Log', Icon: ScrollText, perm: 'system.view_audit_log' },
-  { to: '/system', label: 'System Settings', Icon: SlidersHorizontal, role: 'super_admin' },
-  { to: '/landing', label: 'Landing Page', Icon: Megaphone, role: 'super_admin' },
+const NAV_GROUPS = [
+  {
+    label: 'Overview',
+    items: [
+      { to: '/dashboard', label: 'Dashboard', Icon: LayoutDashboard },
+      { to: '/monitoring', label: 'Monitoring', Icon: Activity },
+    ],
+  },
+  {
+    label: 'Management',
+    items: [
+      { to: '/users', label: 'Users', Icon: Users },
+      { to: '/workspaces', label: 'Workspaces', Icon: KanbanSquare },
+      { to: '/roles', label: 'Roles & Permissions', Icon: ShieldCheck, role: 'super_admin' },
+      { to: '/storage', label: 'Storage', Icon: HardDrive, perm: 'storage.view' },
+    ],
+  },
+  {
+    label: 'System',
+    items: [
+      { to: '/audit', label: 'Audit Log', Icon: ScrollText, perm: 'system.view_audit_log' },
+      { to: '/system', label: 'System Settings', Icon: SlidersHorizontal, role: 'super_admin' },
+      { to: '/landing', label: 'Landing Page', Icon: Megaphone, role: 'super_admin' },
+    ],
+  },
 ];
 
 const SIDEBAR_W = 248;
 // Fixed dark sidebar in both themes (admin chrome stays dark).
 const SIDEBAR_BG = '#0B1626';
 
+function NavItem({ to, label, Icon, onNavigate }) {
+  return (
+    <NavLink
+      to={to}
+      onClick={onNavigate}
+      style={({ isActive }) => ({
+        display: 'flex', alignItems: 'center', gap: space.md,
+        padding: '10px 12px', borderRadius: radius.large, textDecoration: 'none',
+        color: isActive ? '#FFFFFF' : 'rgba(255,255,255,0.72)',
+        background: isActive ? 'rgba(24,104,219,0.95)' : 'transparent',
+        fontSize: 14.5, fontWeight: isActive ? 600 : 500,
+        transition: 'background .12s, color .12s',
+      })}
+      onMouseEnter={(e) => { if (!e.currentTarget.style.background.includes('rgba(24')) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+      onMouseLeave={(e) => { if (!e.currentTarget.getAttribute('aria-current')) e.currentTarget.style.background = 'transparent'; }}
+    >
+      {({ isActive }) => (
+        <>
+          <span style={{ display: 'inline-flex', opacity: isActive ? 1 : 0.85 }}><Icon size={18} /></span>
+          {label}
+        </>
+      )}
+    </NavLink>
+  );
+}
+
 function SidebarContent({ onNavigate }) {
   const { can, hasRole } = usePermission();
-  const items = NAV.filter((n) => {
+  const visible = (n) => {
     if (n.role && !hasRole(n.role)) return false;
     if (n.perm && !can(n.perm)) return false;
     return true;
-  });
+  };
+  const groups = NAV_GROUPS
+    .map((g) => ({ ...g, items: g.items.filter(visible) }))
+    .filter((g) => g.items.length > 0);
   return (
     <>
       <div style={{
@@ -51,30 +95,20 @@ function SidebarContent({ onNavigate }) {
           Trello Admin
         </span>
       </div>
-      <nav style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: `0 ${space.md}` }}>
-        {items.map(({ to, label, Icon }) => (
-          <NavLink
-            key={to}
-            to={to}
-            onClick={onNavigate}
-            style={({ isActive }) => ({
-              display: 'flex', alignItems: 'center', gap: space.md,
-              padding: '10px 12px', borderRadius: radius.large, textDecoration: 'none',
-              color: isActive ? '#FFFFFF' : 'rgba(255,255,255,0.72)',
-              background: isActive ? 'rgba(24,104,219,0.95)' : 'transparent',
-              fontSize: 14.5, fontWeight: isActive ? 600 : 500,
-              transition: 'background .12s, color .12s',
-            })}
-            onMouseEnter={(e) => { if (!e.currentTarget.style.background.includes('rgba(24')) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
-            onMouseLeave={(e) => { if (!e.currentTarget.getAttribute('aria-current')) e.currentTarget.style.background = 'transparent'; }}
-          >
-            {({ isActive }) => (
-              <>
-                <span style={{ display: 'inline-flex', opacity: isActive ? 1 : 0.85 }}><Icon size={18} /></span>
-                {label}
-              </>
-            )}
-          </NavLink>
+      <nav style={{ display: 'flex', flexDirection: 'column', gap: space.sm, padding: `0 ${space.md}`, overflowY: 'auto' }}>
+        {groups.map((g, gi) => (
+          <div key={g.label}>
+            {gi > 0 && <div style={{ height: 1, background: 'rgba(255,255,255,0.08)', margin: `${space.xs} 8px ${space.sm}` }} />}
+            <div style={{
+              padding: '4px 12px', fontSize: 11, fontWeight: 700, letterSpacing: 0.7,
+              textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)',
+            }}>
+              {g.label}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {g.items.map((it) => <NavItem key={it.to} {...it} onNavigate={onNavigate} />)}
+            </div>
+          </div>
         ))}
       </nav>
       <div style={{
@@ -87,11 +121,34 @@ function SidebarContent({ onNavigate }) {
   );
 }
 
+// Thin top progress bar that animates briefly on each route change.
+function NavProgress({ trigger }) {
+  const [active, setActive] = useState(false);
+  useEffect(() => {
+    setActive(true);
+    const t = setTimeout(() => setActive(false), 450);
+    return () => clearTimeout(t);
+  }, [trigger]);
+  return (
+    <div aria-hidden style={{
+      position: 'sticky', top: 60, left: 0, right: 0, height: 2, zIndex: 29, overflow: 'hidden',
+      pointerEvents: 'none',
+    }}>
+      <div className={active ? 'admin-navbar-on' : undefined} style={{
+        height: '100%', width: '100%', transformOrigin: '0 50%',
+        transform: active ? undefined : 'scaleX(0)', opacity: active ? 1 : 0,
+        background: `linear-gradient(90deg, ${color.blue}, ${color.blueBright ?? color.blue})`,
+      }} />
+    </div>
+  );
+}
+
 export function Layout({ children }) {
   const { user: rawUser, logout } = useAuth();
   const { resolved } = useTheme();
   const user = meProfile(rawUser);
   const navigate = useNavigate();
+  const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const onLogout = async () => {
@@ -173,13 +230,31 @@ export function Layout({ children }) {
           </div>
         </header>
 
+        <NavProgress trigger={location.pathname} />
         <main style={{ flex: 1, padding: space.xl, overflow: 'auto', width: '100%', boxSizing: 'border-box' }}>
-          {children}
+          <div key={location.pathname} className="admin-page-enter">
+            {children}
+          </div>
         </main>
       </div>
 
       <style>{`
         :root { color-scheme: ${resolved}; }
+        @keyframes adminPageEnter {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .admin-page-enter { animation: adminPageEnter .18s ease-out both; }
+        @keyframes adminNavbar {
+          0% { transform: scaleX(0); opacity: 1; }
+          70% { transform: scaleX(0.85); opacity: 1; }
+          100% { transform: scaleX(1); opacity: 0; }
+        }
+        .admin-navbar-on { animation: adminNavbar .45s ease-out forwards; }
+        @media (prefers-reduced-motion: reduce) {
+          .admin-page-enter { animation: none !important; }
+          .admin-navbar-on { animation: none !important; opacity: 0 !important; }
+        }
         @media (max-width: 1023px) {
           .admin-sidebar { display: none !important; }
           .admin-content { margin-left: 0 !important; }

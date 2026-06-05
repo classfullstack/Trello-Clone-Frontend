@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  Badge, Button, Modal, Spinner, EmptyState,
+  Badge, Button, Modal, EmptyState,
   usePermission, useToast, color, space, font, radius,
 } from '@trello/ui';
 import { ShieldCheck, Lock, AlertTriangle, ChevronRight } from 'lucide-react';
@@ -9,6 +9,7 @@ import { api } from '../lib/api';
 import { PageHeader } from '../components/Layout';
 import { Table } from '../components/Table';
 import { Alert } from '../components/ui';
+import { RowsSkeleton } from '../components/PageSkeleton';
 
 export function RolesPage() {
   const { hasRole } = usePermission();
@@ -158,7 +159,7 @@ function RoleDetailModal({ roleId, canEdit, onClose }) {
       ) : <Button variant="ghost" onClick={onClose}>Close</Button>}
     >
       {loading && (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: space.xl }}><Spinner size={28} /></div>
+        <div style={{ padding: `${space.sm} 0` }}><RowsSkeleton rows={6} /></div>
       )}
       {error && !loading && (
         <EmptyState icon={<AlertTriangle size={36} />} title="Could not load role" description="The role endpoint may not be available yet." />

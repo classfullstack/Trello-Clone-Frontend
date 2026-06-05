@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Sun, Moon, Monitor, Check } from 'lucide-react';
 import {
-  Card, Spinner, useTheme,
+  Card, Skeleton, useTheme,
   color, font, space, radius,
 } from '@trello/ui';
 import { useSettings, useUpdateSettings } from '../lib/userData';
@@ -97,7 +97,10 @@ export function Settings() {
       <Card style={{ display: 'flex', flexDirection: 'column', gap: space.base }}>
         <h2 style={sectionTitle}>Notifications</h2>
         {settingsQ.isLoading ? (
-          <Spinner size={20} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: space.base }}>
+            <Skeleton width="100%" height={40} />
+            <Skeleton width="100%" height={40} />
+          </div>
         ) : (
           <>
             <Row label="In-app notifications" desc="Show notifications inside the app.">

@@ -14,7 +14,17 @@ import { CalendarView } from './pages/CalendarView';
 import { Dashboard } from './pages/Dashboard';
 import { Profile } from './pages/Profile';
 import { Settings } from './pages/Settings';
+import { NotFound } from './pages/NotFound';
 import { NavBar } from './components/NavBar';
+
+function PageTransition({ children }) {
+  const location = useLocation();
+  return (
+    <div key={location.pathname} className="trello-page-enter" style={{ height: '100%' }}>
+      {children}
+    </div>
+  );
+}
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -34,7 +44,9 @@ function Shell({ children }) {
   return (
     <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <NavBar />
-      <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>{children}</div>
+      <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+        <PageTransition>{children}</PageTransition>
+      </div>
     </div>
   );
 }
@@ -73,7 +85,7 @@ export function App() {
           <Route path="/dashboard" element={<ProtectedRoute><Shell><Dashboard /></Shell></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Shell><Profile /></Shell></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Shell><Settings /></Shell></ProtectedRoute>} />
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<ProtectedRoute><Shell><NotFound /></Shell></ProtectedRoute>} />
         </Routes>
       </div>
     </>

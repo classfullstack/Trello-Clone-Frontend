@@ -11,7 +11,7 @@ import {
   Filter as FilterIcon, X, FileText, Tag as TagIcon, Users, SlidersHorizontal, CalendarDays,
 } from 'lucide-react';
 import {
-  Button, Input, Textarea, Modal, Spinner, EmptyState, IconButton, Dropdown, MenuItem, LabelChip, Avatar, useConfirm,
+  Button, Input, Textarea, Modal, Skeleton, EmptyState, IconButton, Dropdown, MenuItem, LabelChip, Avatar, useConfirm,
   color, font, radius, shadow, space, boardBackgrounds,
 } from '@trello/ui';
 import {
@@ -289,11 +289,7 @@ export function BoardView() {
         )}
       </div>
 
-      {isLoading && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
-          <Spinner size={32} color="#fff" />
-        </div>
-      )}
+      {isLoading && <BoardSkeleton />}
 
       {isError && !isLoading && (
         <EmptyState icon={<AlertTriangle size={36} />} title="Could not load board"
@@ -403,6 +399,24 @@ export function BoardView() {
       <CustomFieldsManager open={fieldsOpen} onClose={() => setFieldsOpen(false)} boardId={boardId} fields={board?.customFields ?? []} />
 
       <CardModal card={openCard} boardId={boardId} board={board} onClose={() => setOpenCard(null)} />
+    </div>
+  );
+}
+
+function BoardSkeleton() {
+  return (
+    <div style={{ display: 'flex', gap: space.base, padding: '20px 24px 24px', flex: 1, minHeight: 0, alignItems: 'flex-start', overflow: 'hidden' }}>
+      {[4, 2, 3].map((n, li) => (
+        <div key={li} style={{ width: 296, flexShrink: 0, background: color.surface, borderRadius: radius.large, padding: space.md, display: 'flex', flexDirection: 'column', gap: space.sm }}>
+          <Skeleton width="55%" height={16} style={{ marginBottom: space.xs }} />
+          {Array.from({ length: n }).map((_, ci) => (
+            <Skeleton key={ci} height={56} radius={radius.base} />
+          ))}
+        </div>
+      ))}
+      <div style={{ width: 296, flexShrink: 0 }}>
+        <Skeleton height={44} radius={radius.large} style={{ background: 'rgba(255,255,255,0.5)' }} />
+      </div>
     </div>
   );
 }

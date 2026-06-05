@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Columns3, AlertTriangle, CalendarDays } from 'lucide-react';
 import {
-  Button, Spinner, EmptyState, IconButton,
+  Button, Skeleton, EmptyState, IconButton,
   color, font, space, radius,
 } from '@trello/ui';
 import { useBoardData, useUpdateCard } from '../lib/boardData';
@@ -56,6 +56,24 @@ function EventChip({ card, overdue, onClick }) {
   );
 }
 
+function CalendarSkeleton() {
+  return (
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: space.base, padding: '12px 24px', borderBottom: `1px solid ${color.border}` }}>
+        <Skeleton width={180} height={18} />
+        <span style={{ flex: 1 }} />
+        <Skeleton width={150} height={18} />
+        <Skeleton width={72} height={34} radius={radius.base} />
+      </div>
+      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridAutoRows: '1fr', gap: 1, padding: 1, minHeight: 0 }}>
+        {Array.from({ length: 35 }).map((_, i) => (
+          <Skeleton key={i} height="100%" radius={radius.base} style={{ minHeight: 96 }} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function CalendarView() {
   const { boardId = '' } = useParams();
   const { board, cards, isLoading, isError } = useBoardData(boardId);
@@ -92,7 +110,7 @@ export function CalendarView() {
     if (cardId) updateCard.mutate({ cardId, patch: { dueDate: new Date(day.getFullYear(), day.getMonth(), day.getDate(), 12).toISOString() } });
   };
 
-  if (isLoading) return <div style={{ display: 'flex', justifyContent: 'center', padding: space.xl }}><Spinner size={28} /></div>;
+  if (isLoading) return <CalendarSkeleton />;
   if (isError) return <EmptyState icon={<AlertTriangle size={36} />} title="Could not load board" description="Try again in a moment." />;
 
   return (

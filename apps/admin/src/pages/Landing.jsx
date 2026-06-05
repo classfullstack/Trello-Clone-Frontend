@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { PageHeader } from '../components/Layout';
+import { FormSkeleton } from '../components/PageSkeleton';
 
 const EMPTY = {
   brand: { name: '' },
@@ -215,6 +216,9 @@ export function LandingPage() {
   const content = useQuery({
     queryKey: ['admin', 'landing'],
     queryFn: async () => (await api.get('/admin/landing')).data,
+    // Don't refetch on window focus — it would wipe unsaved edits (e.g. after the
+    // file picker closes during an image upload).
+    refetchOnWindowFocus: false,
   });
 
   useEffect(() => {
@@ -260,7 +264,7 @@ export function LandingPage() {
   );
 
   if (content.isLoading || (content.data && !form)) {
-    return <div>{header}<div style={{ display: 'flex', justifyContent: 'center', padding: space.xxl }}><Spinner size={32} /></div></div>;
+    return <div>{header}<FormSkeleton blocks={3} /></div>;
   }
   if (content.isError && !form) {
     return (

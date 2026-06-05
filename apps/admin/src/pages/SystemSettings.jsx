@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  Card, Button, Input, Spinner, EmptyState, useToast, color, space, font, radius,
+  Card, Button, Input, EmptyState, useToast, color, space, font, radius,
 } from '@trello/ui';
 import { Flag, Gauge, Mail, AlertTriangle } from 'lucide-react';
 import { api } from '../lib/api';
 import { PageHeader } from '../components/Layout';
+import { FormSkeleton } from '../components/PageSkeleton';
 
 const FEATURE_LABELS = {
   registration: 'User registration',
@@ -84,7 +85,7 @@ export function SystemSettingsPage() {
     return (
       <div>
         <PageHeader title="System Settings" subtitle="Platform-wide configuration" breadcrumb={['Admin', 'System']} />
-        <div style={{ display: 'flex', justifyContent: 'center', padding: space.xxl }}><Spinner size={32} /></div>
+        <FormSkeleton blocks={3} />
       </div>
     );
   }

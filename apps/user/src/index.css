@@ -1,2 +1,12 @@
 /* Base reset + animations live in @trello/ui GlobalStyles. App-only overrides here. */
 #root { isolation: isolate; }
+
+@keyframes trello-page-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.trello-page-enter { animation: trello-page-enter 180ms ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .trello-page-enter { animation: none; }
+}

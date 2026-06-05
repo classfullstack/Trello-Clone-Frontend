@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  Button, Badge, Modal, Select, Avatar, Dropdown, MenuItem, IconButton, Spinner,
+  Button, Badge, Modal, Select, Avatar, Dropdown, MenuItem, IconButton,
   usePermission, useToast, useConfirm, setAccessToken, color, space, font,
 } from '@trello/ui';
 import {
@@ -16,6 +16,7 @@ import { useViewMode } from '../lib/useViewMode';
 import { usePagination } from '../lib/usePagination';
 import { useDebounced } from '../lib/useDebounced';
 import { UsersMatrix, UsersDetail } from '../components/UsersViews';
+import { RowsSkeleton } from '../components/PageSkeleton';
 
 const ELEVATED = new Set(['super_admin', 'admin']);
 
@@ -335,7 +336,7 @@ export function UsersPage() {
         footer={<Button variant="secondary" onClick={() => setDetailId(null)}>Close</Button>}
       >
         {detail.isLoading && (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: space.xl }}><Spinner size={28} /></div>
+          <div style={{ padding: `${space.sm} 0` }}><RowsSkeleton rows={5} /></div>
         )}
         {detail.isError && (
           <Alert kind="danger" title="Could not load user">The user endpoint may not be available yet.</Alert>

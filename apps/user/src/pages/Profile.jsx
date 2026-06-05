@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Upload, Trash2 } from 'lucide-react';
 import {
-  useAuth, Button, Input, Card, Avatar, useConfirm,
+  useAuth, Button, Input, Card, Avatar, Skeleton, useConfirm,
   color, font, space,
 } from '@trello/ui';
 import { meUser } from '../lib/me';
@@ -13,7 +13,7 @@ import {
 const sectionTitle = { fontFamily: font.display, fontSize: 20, fontWeight: 700, color: color.text, margin: 0 };
 
 export function Profile() {
-  const { user, refresh, logout } = useAuth();
+  const { user, loading, refresh, logout } = useAuth();
   const me = meUser(user);
   const navigate = useNavigate();
   const confirm = useConfirm();
@@ -63,7 +63,21 @@ export function Profile() {
     });
   };
 
-  if (!me) return null;
+  if (!me) {
+    if (!loading) return null;
+    return (
+      <div style={{ maxWidth: 800, margin: '0 auto', padding: `${space.xxl} ${space.lg}`, display: 'flex', flexDirection: 'column', gap: space.lg }}>
+        <Skeleton width={140} height={28} />
+        {[0, 1].map((i) => (
+          <Card key={i} style={{ display: 'flex', flexDirection: 'column', gap: space.base }}>
+            <Skeleton width={180} height={20} />
+            <Skeleton width="100%" height={48} />
+            <Skeleton width="60%" height={48} />
+          </Card>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div style={{ maxWidth: 800, margin: '0 auto', padding: `${space.xxl} ${space.lg}`, display: 'flex', flexDirection: 'column', gap: space.lg }}>
