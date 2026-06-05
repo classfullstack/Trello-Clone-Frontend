@@ -1,5 +1,5 @@
 import { Navigate } from 'react-router-dom';
-import { usePermission, Button, color, space, font, radius } from '@trello/ui';
+import { usePermission, useAuth, Spinner, Button, color, space, font, radius } from '@trello/ui';
 import { ShieldAlert } from 'lucide-react';
 
 // Route guard — hides UI and redirects. Backend re-checks every mutation (RBAC.md).
@@ -7,6 +7,16 @@ export function RequirePermission({
   permission, role, redirect = '/dashboard', children,
 }) {
   const { can, hasRole } = usePermission();
+  const { loading, user } = useAuth();
+
+  // Wait for auth to resolve before deciding (avoids redirect on deep-link/refresh).
+  if (loading || !user) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+        <Spinner />
+      </div>
+    );
+  }
 
   const permOk = !permission
     || (Array.isArray(permission) ? permission.some(can) : can(permission));

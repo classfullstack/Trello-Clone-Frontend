@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   Plus, Trash2, Pencil, X, Archive, Paperclip, Download, Image as ImageIcon,
-  FileText, Activity as ActivityIcon,
+  FileText, Activity as ActivityIcon, Copy, Eye, EyeOff,
 } from 'lucide-react';
 import {
   Modal, Button, Input, Textarea, Avatar, LabelChip, Spinner, IconButton, useConfirm,
@@ -12,7 +12,7 @@ import {
   useEditComment, useDeleteComment, useToggleChecklistItem, useAddChecklistItem,
   useDeleteChecklistItem, useAddCardLabel, useRemoveCardLabel,
   useAttachments, useUploadAttachment, useDeleteAttachment, useDownloadAttachment,
-  useCardActivity,
+  useCardActivity, useDuplicateCard, useWatchCard,
 } from '../lib/boardData';
 
 const sectionLabel = { fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', color: color.textMuted, marginBottom: 8 };
@@ -288,6 +288,8 @@ export function CardModal({ card, boardId, board, onClose }) {
   const confirm = useConfirm();
   const update = useUpdateCard(boardId, { successMessage: null });
   const del = useDeleteCard(boardId);
+  const duplicate = useDuplicateCard(boardId);
+  const watch = useWatchCard(card?.id);
   const detailQ = useCardDetail(card?.id);
   const commentsQ = useComments(card?.id);
   const addComment = useAddComment(card?.id);
@@ -408,7 +410,15 @@ export function CardModal({ card, boardId, board, onClose }) {
 
       <ActivitySection cardId={card.id} />
 
-      <div style={{ display: 'flex', gap: space.sm, borderTop: `1px solid ${color.border}`, paddingTop: space.base }}>
+      <div style={{ display: 'flex', gap: space.sm, flexWrap: 'wrap', borderTop: `1px solid ${color.border}`, paddingTop: space.base }}>
+        <Button variant="secondary" leftIcon={full.watching ? <EyeOff size={15} /> : <Eye size={15} />}
+          loading={watch.isPending} onClick={() => watch.mutate(!full.watching)}>
+          {full.watching ? 'Unwatch' : 'Watch'}
+        </Button>
+        <Button variant="secondary" leftIcon={<Copy size={15} />} loading={duplicate.isPending}
+          onClick={() => duplicate.mutate(card.id, { onSuccess: onClose })}>
+          Duplicate
+        </Button>
         <Button variant="secondary" leftIcon={<Archive size={15} />}
           onClick={() => saveField({ archived: !full.archived })}>
           {full.archived ? 'Unarchive' : 'Archive'}

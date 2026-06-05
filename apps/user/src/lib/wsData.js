@@ -69,3 +69,26 @@ export function useDeleteBoard(workspaceId) {
     onError: () => toast.error('Could not delete board.'),
   });
 }
+
+export function useStarBoard(workspaceId) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  return useMutation({
+    mutationFn: ({ id, starred }) => api.put(`/boards/${id}/star`, { starred }),
+    onMutate: async ({ id, starred }) => {
+      await qc.cancelQueries({ queryKey: ['boards', workspaceId] });
+      const prev = qc.getQueryData(['boards', workspaceId]);
+      qc.setQueryData(['boards', workspaceId], (old) =>
+        Array.isArray(old) ? old.map((b) => (b.id === id ? { ...b, starred } : b)) : old);
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(['boards', workspaceId], ctx.prev);
+      toast.error('Could not update star.');
+    },
+    onSettled: (_d, _e, { id }) => {
+      if (workspaceId) qc.invalidateQueries({ queryKey: ['boards', workspaceId] });
+      qc.invalidateQueries({ queryKey: ['board', id] });
+    },
+  });
+}

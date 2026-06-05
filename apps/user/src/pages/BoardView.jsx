@@ -8,15 +8,15 @@ import {
 } from '@dnd-kit/sortable';
 import {
   Plus, MoreHorizontal, Pencil, Image, Archive, ArchiveRestore, Trash2, AlertTriangle,
-  Filter as FilterIcon, X,
+  Filter as FilterIcon, X, FileText,
 } from 'lucide-react';
 import {
-  Button, Input, Modal, Spinner, EmptyState, IconButton, Dropdown, MenuItem, LabelChip, Avatar, useConfirm,
+  Button, Input, Textarea, Modal, Spinner, EmptyState, IconButton, Dropdown, MenuItem, LabelChip, Avatar, useConfirm,
   color, font, radius, shadow, space, boardBackgrounds,
 } from '@trello/ui';
 import {
   useBoardData, useCreateList, useUpdateList, useDeleteList, useMoveList,
-  useCreateCard, useMoveCard,
+  useCreateCard, useMoveCard, useSortList,
 } from '../lib/boardData';
 import { useUpdateBoard, useDeleteBoard } from '../lib/wsData';
 import { useBoardSocket } from '../lib/socket';
@@ -89,6 +89,7 @@ export function BoardView() {
   const moveList = useMoveList(boardId);
   const createCard = useCreateCard(boardId);
   const moveCard = useMoveCard(boardId);
+  const sortList = useSortList(boardId);
   const updateBoard = useUpdateBoard(board?.workspaceId);
   const deleteBoard = useDeleteBoard(board?.workspaceId);
 
@@ -100,6 +101,8 @@ export function BoardView() {
   const [renameOpen, setRenameOpen] = useState(false);
   const [boardName, setBoardName] = useState('');
   const [bgOpen, setBgOpen] = useState(false);
+  const [descOpen, setDescOpen] = useState(false);
+  const [boardDesc, setBoardDesc] = useState('');
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
@@ -199,6 +202,7 @@ export function BoardView() {
     createCard.mutate({ listId, title, position: midpoint(last, null) });
   };
 
+  const onSortList = (listId, by) => sortList.mutate({ listId, by });
   const onRenameList = (listId, name) => renameList.mutate({ listId, patch: { name } });
   const onArchiveList = (listId) => archiveList.mutate({ listId, patch: { archived: true } });
   const onDeleteList = async (list) => {
@@ -223,6 +227,10 @@ export function BoardView() {
     if (ok) deleteBoard.mutate(boardId, { onSuccess: () => navigate('/') });
   };
   const pickBg = (bg) => updateBoard.mutate({ id: boardId, patch: { background: bg } }, { onSuccess: () => setBgOpen(false) });
+  const submitBoardDesc = (e) => {
+    e.preventDefault();
+    updateBoard.mutate({ id: boardId, patch: { description: boardDesc.trim() || null } }, { onSuccess: () => setDescOpen(false) });
+  };
 
   const bg = board?.background || 'linear-gradient(135deg, #0079BF 0%, #5067C5 100%)';
 
@@ -254,6 +262,7 @@ export function BoardView() {
             trigger={<IconButton label="Board actions" style={{ color: '#fff', background: 'rgba(255,255,255,0.18)' }}><MoreHorizontal size={18} /></IconButton>}
           >
             <MenuItem icon={<Pencil size={16} />} onClick={() => { setBoardName(board.name); setRenameOpen(true); }}>Rename</MenuItem>
+            <MenuItem icon={<FileText size={16} />} onClick={() => { setBoardDesc(board.description ?? ''); setDescOpen(true); }}>Edit description</MenuItem>
             <MenuItem icon={<Image size={16} />} onClick={() => setBgOpen(true)}>Change background</MenuItem>
             <MenuItem icon={board.archived ? <ArchiveRestore size={16} /> : <Archive size={16} />} onClick={onArchiveBoard}>
               {board.archived ? 'Unarchive' : 'Archive'}
@@ -291,6 +300,7 @@ export function BoardView() {
                   onRename={onRenameList}
                   onArchive={onArchiveList}
                   onDelete={onDeleteList}
+                  onSort={onSortList}
                 />
               ))}
             </SortableContext>
@@ -345,6 +355,19 @@ export function BoardView() {
       >
         <form onSubmit={submitBoardRename}>
           <Input label="Board name" autoFocus value={boardName} onChange={(e) => setBoardName(e.target.value)} />
+        </form>
+      </Modal>
+
+      <Modal
+        open={descOpen} onClose={() => setDescOpen(false)} title="Board description" size="sm"
+        footer={<>
+          <Button variant="ghost" onClick={() => setDescOpen(false)}>Cancel</Button>
+          <Button onClick={submitBoardDesc} loading={updateBoard.isPending}>Save</Button>
+        </>}
+      >
+        <form onSubmit={submitBoardDesc}>
+          <Textarea autoFocus value={boardDesc} onChange={(e) => setBoardDesc(e.target.value)}
+            placeholder="Add a description for this board…" style={{ minHeight: 120 }} />
         </form>
       </Modal>
 

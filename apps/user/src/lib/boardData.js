@@ -209,6 +209,39 @@ export function useDeleteCard(boardId) {
   });
 }
 
+export function useDuplicateCard(boardId) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  return useMutation({
+    mutationFn: (cardId) => api.post(`/cards/${cardId}/duplicate`),
+    onSuccess: () => { toast.success('Card duplicated.'); invalidateBoard(qc, boardId); },
+    onError: () => toast.error('Could not duplicate card.'),
+  });
+}
+
+export function useWatchCard(cardId) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  return useMutation({
+    mutationFn: (watching) => api.put(`/cards/${cardId}/watch`, { watching }),
+    onSuccess: (_r, watching) => {
+      toast.success(watching ? 'Watching card.' : 'Stopped watching.');
+      qc.invalidateQueries({ queryKey: ['card', cardId] });
+    },
+    onError: () => toast.error('Could not update watch.'),
+  });
+}
+
+export function useSortList(boardId) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  return useMutation({
+    mutationFn: ({ listId, by }) => api.post(`/lists/${listId}/sort`, { by }),
+    onSuccess: () => { toast.success('List sorted.'); invalidateBoard(qc, boardId); },
+    onError: () => toast.error('Could not sort list.'),
+  });
+}
+
 export function useCardDetail(cardId) {
   return useQuery({
     queryKey: ['card', cardId],
