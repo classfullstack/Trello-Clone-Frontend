@@ -423,9 +423,14 @@ export function CardModal({ card, boardId, board, onClose }) {
 
   const comments = commentsQ.data ?? [];
   const checklists = full.checklists ?? [];
+  const descDirty = description !== (full.description ?? '');
+
+  const saveDescription = () => saveField({ description });
+  const cancelDescription = () => setDescription(full.description ?? '');
 
   return (
-    <Modal open={!!card} onClose={onClose} width={680} title={null} padded>
+    <Modal open={!!card} onClose={onClose} width={940} title={null} padded>
+      <style>{`@media (max-width:760px){.cm-grid{flex-direction:column}.cm-side{width:100%!important}}`}</style>
       {cover && (
         <div style={{ position: 'relative', marginBottom: space.lg }}>
           <img src={cover} alt="Card cover" style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: radius.large, display: 'block' }} />
@@ -444,70 +449,76 @@ export function CardModal({ card, boardId, board, onClose }) {
         }}
       />
 
-      <div style={{ marginBottom: space.lg }}>
-        <LabelsEditor boardId={boardId} card={full} boardLabels={boardLabels} />
-      </div>
+      <div className="cm-grid" style={{ display: 'flex', gap: space.xl, alignItems: 'flex-start' }}>
+        {/* Main column */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <CustomFieldsEditor boardId={boardId} card={full} fields={board?.customFields ?? []} />
 
-      <div style={{ marginBottom: space.lg }}>
-        <MembersEditor boardId={boardId} card={full} />
-      </div>
+          <div style={{ marginBottom: space.lg }}>
+            <div style={sectionLabel}>Description</div>
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Add a more detailed description…"
+              style={{ minHeight: 110 }}
+            />
+            {descDirty && (
+              <div style={{ display: 'flex', gap: space.sm, marginTop: space.sm }}>
+                <Button size="sm" loading={update.isPending} onClick={saveDescription}>Save</Button>
+                <Button size="sm" variant="ghost" onClick={cancelDescription}>Cancel</Button>
+              </div>
+            )}
+          </div>
 
-      <CustomFieldsEditor boardId={boardId} card={full} fields={board?.customFields ?? []} />
+          {checklists.map((cl) => <Checklist key={cl.id} checklist={cl} cardId={card.id} />)}
 
-      <div style={{ marginBottom: space.lg }}>
-        <div style={sectionLabel}>Description</div>
-        <Textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          onBlur={() => description !== (full.description ?? '') && saveField({ description })}
-          placeholder="Add a more detailed description…"
-          style={{ minHeight: 96 }}
-        />
-      </div>
+          <AttachmentsSection boardId={boardId} card={full} onSetCover={setCoverFromAttachment} />
 
-      <div style={{ marginBottom: space.lg, maxWidth: 200 }}>
-        <div style={sectionLabel}>Due date</div>
-        <Input type="date" value={due} onChange={(e) => setDue(e.target.value)} onBlur={() => saveField({ dueDate: due || null })} />
-      </div>
+          <div style={{ marginBottom: space.lg }}>
+            <div style={sectionLabel}>Comments</div>
+            <form onSubmit={onComment} style={{ display: 'flex', gap: space.sm, marginBottom: space.base }}>
+              <MentionInput placeholder="Write a comment… use @ to mention" value={comment}
+                onChange={setComment} candidates={mentionCandidates} onMentionsChange={setMentions} />
+              <Button type="submit" loading={addComment.isPending} disabled={!comment.trim()} style={{ whiteSpace: 'nowrap' }}>Send</Button>
+            </form>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: space.md }}>
+              {commentsQ.isLoading && <Spinner size={18} />}
+              {!commentsQ.isLoading && comments.map((c) => <Comment key={c.id} c={c} cardId={card.id} currentUserId={full.currentUserId} />)}
+              {!commentsQ.isLoading && comments.length === 0 && (
+                <div style={{ fontSize: 13, color: color.textMuted }}>No comments yet.</div>
+              )}
+            </div>
+          </div>
 
-      {checklists.map((cl) => <Checklist key={cl.id} checklist={cl} cardId={card.id} />)}
-
-      <AttachmentsSection boardId={boardId} card={full} onSetCover={setCoverFromAttachment} />
-
-      <div style={{ marginBottom: space.lg }}>
-        <div style={sectionLabel}>Comments</div>
-        <form onSubmit={onComment} style={{ display: 'flex', gap: space.sm, marginBottom: space.base }}>
-          <MentionInput placeholder="Write a comment… use @ to mention" value={comment}
-            onChange={setComment} candidates={mentionCandidates} onMentionsChange={setMentions} />
-          <Button type="submit" loading={addComment.isPending} disabled={!comment.trim()} style={{ whiteSpace: 'nowrap' }}>Send</Button>
-        </form>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: space.md }}>
-          {commentsQ.isLoading && <Spinner size={18} />}
-          {!commentsQ.isLoading && comments.map((c) => <Comment key={c.id} c={c} cardId={card.id} currentUserId={full.currentUserId} />)}
-          {!commentsQ.isLoading && comments.length === 0 && (
-            <div style={{ fontSize: 13, color: color.textMuted }}>No comments yet.</div>
-          )}
+          <ActivitySection cardId={card.id} />
         </div>
-      </div>
 
-      <ActivitySection cardId={card.id} />
-
-      <div style={{ display: 'flex', gap: space.sm, flexWrap: 'wrap', borderTop: `1px solid ${color.border}`, paddingTop: space.base }}>
-        <Button variant="secondary" leftIcon={full.watching ? <EyeOff size={15} /> : <Eye size={15} />}
-          loading={watch.isPending} onClick={() => watch.mutate(!full.watching)}>
-          {full.watching ? 'Unwatch' : 'Watch'}
-        </Button>
-        <Button variant="secondary" leftIcon={<Copy size={15} />} loading={duplicate.isPending}
-          onClick={() => duplicate.mutate(card.id, { onSuccess: onClose })}>
-          Duplicate
-        </Button>
-        <Button variant="secondary" leftIcon={<Archive size={15} />}
-          onClick={() => saveField({ archived: !full.archived })}>
-          {full.archived ? 'Unarchive' : 'Archive'}
-        </Button>
-        <Button variant="danger" leftIcon={<Trash2 size={15} />} loading={del.isPending} onClick={onDeleteCard}>
-          Delete card
-        </Button>
+        {/* Sidebar column */}
+        <div className="cm-side" style={{ width: 280, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: space.lg }}>
+          <div><LabelsEditor boardId={boardId} card={full} boardLabels={boardLabels} /></div>
+          <div><MembersEditor boardId={boardId} card={full} /></div>
+          <div>
+            <div style={sectionLabel}>Due date</div>
+            <Input type="date" value={due} onChange={(e) => setDue(e.target.value)} onBlur={() => saveField({ dueDate: due || null })} />
+          </div>
+          <div style={{ borderTop: `1px solid ${color.border}`, paddingTop: space.base, display: 'flex', flexDirection: 'column', gap: space.sm }}>
+            <Button variant="secondary" leftIcon={full.watching ? <EyeOff size={15} /> : <Eye size={15} />}
+              loading={watch.isPending} onClick={() => watch.mutate(!full.watching)} style={{ justifyContent: 'flex-start' }}>
+              {full.watching ? 'Unwatch' : 'Watch'}
+            </Button>
+            <Button variant="secondary" leftIcon={<Copy size={15} />} loading={duplicate.isPending}
+              onClick={() => duplicate.mutate(card.id, { onSuccess: onClose })} style={{ justifyContent: 'flex-start' }}>
+              Duplicate
+            </Button>
+            <Button variant="secondary" leftIcon={<Archive size={15} />}
+              onClick={() => saveField({ archived: !full.archived })} style={{ justifyContent: 'flex-start' }}>
+              {full.archived ? 'Unarchive' : 'Archive'}
+            </Button>
+            <Button variant="danger" leftIcon={<Trash2 size={15} />} loading={del.isPending} onClick={onDeleteCard} style={{ justifyContent: 'flex-start' }}>
+              Delete card
+            </Button>
+          </div>
+        </div>
       </div>
     </Modal>
   );
