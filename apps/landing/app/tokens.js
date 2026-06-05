@@ -36,4 +36,4 @@ export const font = {
   text: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
 };
 
-export const USER_APP_URL = 'http://localhost:5173';
+export const USER_APP_URL = process.env.NEXT_PUBLIC_USER_APP_URL || 'http://103.179.189.81';

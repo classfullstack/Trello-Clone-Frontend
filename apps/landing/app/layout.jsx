@@ -1,6 +1,6 @@
 import './globals.css';
 
-const SITE_URL = 'http://localhost:3000';
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://103.179.189.81:3000';
 const TITLE = 'Trello Clone — Organize anything, together';
 const DESCRIPTION =
   'Boards, lists, and cards to organize your projects and collaborate with your team in real time. A fast, simple Trello clone, free to start.';
