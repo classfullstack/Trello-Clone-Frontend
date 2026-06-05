@@ -177,9 +177,12 @@ export function GlobalStyles() {
       html, body, #root { margin: 0; height: 100%; }
       body {
         font-family: ${font.text};
+        font-size: 15px;
+        line-height: 1.5;
         color: var(--c-text);
         background: var(--c-surface-alt);
         -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
         text-rendering: optimizeLegibility;
         transition: background-color .2s ease, color .2s ease;
       }

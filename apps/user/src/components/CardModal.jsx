@@ -18,7 +18,7 @@ import {
 } from '../lib/boardData';
 import { MentionInput } from './MentionInput';
 
-const sectionLabel = { fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', color: color.textMuted, marginBottom: 8 };
+const sectionLabel = { fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', color: color.textMuted, marginBottom: 10 };
 
 function Comment({ c, cardId, currentUserId }) {
   const confirm = useConfirm();
@@ -496,7 +496,7 @@ export function CardModal({ card, boardId, board, onClose }) {
   };
 
   return (
-    <Modal open={!!card} onClose={onClose} width={940} title={null} padded>
+    <Modal open={!!card} onClose={onClose} width={980} title={null} padded>
       <style>{`@media (max-width:640px){.cm-grid{flex-direction:column}.cm-side{width:100%!important}}`}</style>
       {cover && (
         <div style={{ position: 'relative', marginBottom: space.lg }}>
@@ -511,7 +511,7 @@ export function CardModal({ card, boardId, board, onClose }) {
         onBlur={() => title.trim() && title !== card.title && saveField({ title: title.trim() })}
         aria-label="Card title"
         style={{
-          fontFamily: font.display, fontSize: 22, fontWeight: 600, color: color.text,
+          fontFamily: font.display, fontSize: 26, fontWeight: 700, color: color.text,
           border: 'none', outline: 'none', width: '100%', marginBottom: space.lg, background: 'transparent',
         }}
       />
@@ -561,7 +561,7 @@ export function CardModal({ card, boardId, board, onClose }) {
         </div>
 
         {/* Sidebar column */}
-        <div className="cm-side" style={{ width: 280, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: space.lg }}>
+        <div className="cm-side" style={{ width: 300, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: space.lg }}>
           <div><LabelsEditor boardId={boardId} card={full} boardLabels={boardLabels} /></div>
           <div><MembersEditor boardId={boardId} workspaceId={board?.workspaceId} card={full} /></div>
           <div>

@@ -39,8 +39,8 @@ export function ListColumn({ list, cards, onAddCard, onCardClick, onRename, onDe
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.4 : 1,
-    width: 280, flexShrink: 0, background: color.surfaceAlt, borderRadius: radius.large,
-    padding: space.sm, maxHeight: '100%', display: 'flex', flexDirection: 'column',
+    width: 296, flexShrink: 0, background: color.surfaceAlt, borderRadius: radius.large,
+    padding: space.md, maxHeight: '100%', display: 'flex', flexDirection: 'column',
     border: `1px solid ${color.border}`,
   };
 
@@ -75,7 +75,7 @@ export function ListColumn({ list, cards, onAddCard, onCardClick, onRename, onDe
             onClick={() => { setDraftName(list.name); setEditing(true); }}
             style={{
               flex: 1, textAlign: 'left', border: 'none', background: 'transparent', cursor: 'text',
-              fontFamily: font.text, fontWeight: 600, fontSize: 14, color: color.text, padding: '2px 4px',
+              fontFamily: font.text, fontWeight: 700, fontSize: 15, color: color.text, padding: '2px 4px',
             }}
           >
             {list.name}
@@ -127,12 +127,12 @@ export function ListColumn({ list, cards, onAddCard, onCardClick, onRename, onDe
         <button
           onClick={() => setAdding(true)}
           style={{
-            display: 'flex', alignItems: 'center', gap: 6, width: '100%', border: 'none',
-            background: 'transparent', color: color.textMuted, textAlign: 'left', padding: '8px',
-            cursor: 'pointer', borderRadius: radius.base, fontSize: 14, fontFamily: font.text,
+            display: 'flex', alignItems: 'center', gap: 8, width: '100%', border: 'none',
+            background: 'transparent', color: color.textMuted, textAlign: 'left', padding: '10px',
+            cursor: 'pointer', borderRadius: radius.base, fontSize: 15, fontFamily: font.text, fontWeight: 500,
           }}
         >
-          <Plus size={15} /> Add a card
+          <Plus size={16} /> Add a card
         </button>
       )}
     </div>

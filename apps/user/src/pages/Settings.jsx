@@ -6,7 +6,7 @@ import {
 } from '@trello/ui';
 import { useSettings, useUpdateSettings } from '../lib/userData';
 
-const sectionTitle = { fontFamily: font.display, fontSize: 18, fontWeight: 600, color: color.text, margin: 0 };
+const sectionTitle = { fontFamily: font.display, fontSize: 20, fontWeight: 700, color: color.text, margin: 0 };
 
 const THEMES = [
   { key: 'light', label: 'Light', Icon: Sun },
@@ -79,7 +79,7 @@ export function Settings() {
   };
 
   return (
-    <div style={{ maxWidth: 720, margin: '0 auto', padding: `${space.xl} ${space.base}`, display: 'flex', flexDirection: 'column', gap: space.lg }}>
+    <div style={{ maxWidth: 800, margin: '0 auto', padding: `${space.xxl} ${space.lg}`, display: 'flex', flexDirection: 'column', gap: space.lg }}>
       <h1 style={{ fontFamily: font.display, fontSize: 28, fontWeight: 700, color: color.text, margin: 0 }}>Settings</h1>
 
       <Card style={{ display: 'flex', flexDirection: 'column', gap: space.base }}>

@@ -55,13 +55,13 @@ export function Workspaces() {
   const workspaces = data ?? [];
 
   return (
-    <div style={{ maxWidth: 1080, margin: '0 auto', padding: `${space.xl} ${space.base}` }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: space.base, marginBottom: space.lg }}>
+    <div style={{ maxWidth: 1200, margin: '0 auto', padding: `${space.xxl} ${space.lg}` }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: space.base, marginBottom: space.xl }}>
         <div>
-          <h1 style={{ fontFamily: font.display, fontSize: 28, fontWeight: 700, color: color.text, margin: 0 }}>
+          <h1 style={{ fontFamily: font.display, fontSize: 34, fontWeight: 800, color: color.text, margin: 0, letterSpacing: '-0.5px' }}>
             Your Workspaces
           </h1>
-          <p style={{ fontFamily: font.text, fontSize: 14, color: color.textMuted, margin: `${space.xs} 0 0` }}>
+          <p style={{ fontFamily: font.text, fontSize: 16, color: color.textMuted, margin: `${space.sm} 0 0` }}>
             Group boards by team or project.
           </p>
         </div>
@@ -129,7 +129,7 @@ export function Workspaces() {
 }
 
 const gridStyle = {
-  display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: space.base,
+  display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: space.lg,
 };
 
 function WorkspaceCard({ ws, grad, onOpen, onRename, onDelete }) {
@@ -149,14 +149,14 @@ function WorkspaceCard({ ws, grad, onOpen, onRename, onDelete }) {
         onClick={onOpen}
         style={{ display: 'block', width: '100%', textAlign: 'left', padding: 0, cursor: 'pointer', border: 'none', background: 'transparent' }}
       >
-        <div style={{ height: 72, background: grad }} />
-        <div style={{ padding: space.base, display: 'flex', alignItems: 'center', gap: space.md }}>
-          <Avatar name={ws.name} size={40} style={{ borderRadius: radius.large, marginTop: -36, border: `3px solid ${color.surface}` }} />
+        <div style={{ height: 88, background: grad }} />
+        <div style={{ padding: space.lg, display: 'flex', alignItems: 'center', gap: space.md }}>
+          <Avatar name={ws.name} size={52} style={{ borderRadius: radius.large, marginTop: -44, border: `3px solid ${color.surface}` }} />
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontFamily: font.display, fontSize: 16, fontWeight: 600, color: color.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div style={{ fontFamily: font.display, fontSize: 18, fontWeight: 700, color: color.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {ws.name}
             </div>
-            <div style={{ fontFamily: font.text, fontSize: 13, color: color.textMuted }}>
+            <div style={{ fontFamily: font.text, fontSize: 14, color: color.textMuted }}>
               {ws.boardCount != null ? `${ws.boardCount} board${ws.boardCount === 1 ? '' : 's'}` : 'Open boards'}
               {ws.role ? ` · ${ws.role}` : ''}
             </div>

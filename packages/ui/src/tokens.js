@@ -61,9 +61,11 @@ export const shadow = {
   dropdown: v('s-dropdown', 'rgba(9, 30, 66, 0.25) 0px 4px 12px 0px'),
 };
 
+const SANS = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+
 export const font = {
-  display: "'Charlie Display', Georgia, 'Times New Roman', serif",
-  text: "'Charlie Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+  display: SANS,
+  text: SANS,
   mono: "Menlo, Monaco, 'Courier New', monospace",
 };
 

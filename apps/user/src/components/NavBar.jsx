@@ -26,21 +26,21 @@ function SearchBox() {
   const hasResults = results.boards.length > 0 || results.cards.length > 0;
 
   return (
-    <div ref={ref} style={{ flex: 1, maxWidth: 360, position: 'relative' }}>
+    <div ref={ref} style={{ flex: 1, maxWidth: 460, position: 'relative' }}>
       <div style={{
         display: 'flex', alignItems: 'center', gap: space.sm,
-        border: `1px solid ${color.border}`, borderRadius: radius.primary, padding: '0 10px',
+        border: `1px solid ${color.border}`, borderRadius: radius.primary, padding: '0 12px',
         background: color.surface,
       }}>
-        <Search size={16} aria-hidden style={{ color: color.mediumGray, flexShrink: 0 }} />
+        <Search size={18} aria-hidden style={{ color: color.mediumGray, flexShrink: 0 }} />
         <input
           placeholder="Search"
           value={q}
           onChange={(e) => { setQ(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
           style={{
-            flex: 1, border: 'none', outline: 'none', height: 34, fontFamily: font.text,
-            fontSize: 14, color: color.text, background: 'transparent',
+            flex: 1, border: 'none', outline: 'none', height: 40, fontFamily: font.text,
+            fontSize: 15, color: color.text, background: 'transparent',
           }}
         />
       </div>
@@ -88,10 +88,10 @@ function Logo({ onClick }) {
       cursor: 'pointer', padding: '4px 8px', borderRadius: radius.base,
     }}>
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
-        <span style={{ width: 5, height: 13, background: color.blue, borderRadius: 2 }} />
-        <span style={{ width: 5, height: 9, background: color.blue, borderRadius: 2 }} />
+        <span style={{ width: 6, height: 16, background: color.blue, borderRadius: 2 }} />
+        <span style={{ width: 6, height: 11, background: color.blue, borderRadius: 2 }} />
       </span>
-      <span style={{ fontFamily: font.display, fontSize: 19, fontWeight: 700, color: color.blue, letterSpacing: '-0.5px' }}>
+      <span style={{ fontFamily: font.display, fontSize: 22, fontWeight: 800, color: color.blue, letterSpacing: '-0.5px' }}>
         Trello
       </span>
     </button>
@@ -113,9 +113,9 @@ export function NavBar() {
   return (
     <header style={{
       position: 'sticky', top: 0, zIndex: 500, background: color.surface,
-      borderBottom: `1px solid ${color.border}`, padding: '6px 16px',
+      borderBottom: `1px solid ${color.border}`, padding: '8px 20px',
       display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: space.base,
-      height: 52, boxSizing: 'border-box',
+      height: 60, boxSizing: 'border-box',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: space.xs, minWidth: 0 }}>
         <Logo onClick={() => navigate('/')} />
@@ -125,14 +125,14 @@ export function NavBar() {
 
       {me && (
         <div style={{ display: 'flex', alignItems: 'center', gap: space.xs }}>
-          <ThemeToggle />
+          <ThemeToggle size={38} />
           <NotificationsBell enabled={!!me} />
           <Dropdown
             align="right"
             width={240}
             trigger={
               <button aria-label="Account menu" style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: 0, borderRadius: '50%' }}>
-                <Avatar name={me.name} email={me.email} src={me.avatarUrl} size={32} />
+                <Avatar name={me.name} email={me.email} src={me.avatarUrl} size={36} />
               </button>
             }
           >

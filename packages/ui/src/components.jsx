@@ -67,9 +67,9 @@ const btnVariants = {
 };
 
 const btnSizes = {
-  sm: { minHeight: 32, padding: '4px 12px', fontSize: 14 },
-  md: { minHeight: 40, padding: '8px 16px', fontSize: 14 },
-  lg: { minHeight: 44, padding: '10px 20px', fontSize: 16 },
+  sm: { minHeight: 34, padding: '4px 14px', fontSize: 14 },
+  md: { minHeight: 42, padding: '9px 18px', fontSize: 15 },
+  lg: { minHeight: 46, padding: '11px 22px', fontSize: 16 },
 };
 
 export function Button({
@@ -150,15 +150,15 @@ export function Input({ label, error, helper, id, style, wrapStyle, ...rest }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: space.xs, ...wrapStyle }}>
       {label && (
-        <label htmlFor={inputId} style={{ fontFamily: font.text, fontSize: 12, fontWeight: 600, color: color.darkGray }}>
+        <label htmlFor={inputId} style={{ fontFamily: font.text, fontSize: 13, fontWeight: 600, color: color.darkGray }}>
           {label}
         </label>
       )}
       <input
         id={inputId}
         style={{
-          fontFamily: font.text, fontSize: 14, lineHeight: '24px', minHeight: 40,
-          padding: '8px 12px', borderRadius: radius.primary,
+          fontFamily: font.text, fontSize: 15, lineHeight: '24px', minHeight: 44,
+          padding: '10px 14px', borderRadius: radius.primary,
           border: `1px solid ${borderColor}`, color: color.text,
           background: error ? color.errorBg : color.surface,
           outline: 'none', width: '100%', boxSizing: 'border-box',
@@ -187,15 +187,15 @@ export function Textarea({ label, error, helper, id, style, wrapStyle, ...rest }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: space.xs, ...wrapStyle }}>
       {label && (
-        <label htmlFor={taId} style={{ fontFamily: font.text, fontSize: 12, fontWeight: 600, color: color.darkGray }}>
+        <label htmlFor={taId} style={{ fontFamily: font.text, fontSize: 13, fontWeight: 600, color: color.darkGray }}>
           {label}
         </label>
       )}
       <textarea
         id={taId}
         style={{
-          fontFamily: font.text, fontSize: 14, lineHeight: '21px', minHeight: 80,
-          padding: '8px 12px', borderRadius: radius.primary,
+          fontFamily: font.text, fontSize: 15, lineHeight: '22px', minHeight: 88,
+          padding: '10px 14px', borderRadius: radius.primary,
           border: `1px solid ${borderColor}`, color: color.text,
           background: color.surface, outline: 'none', width: '100%', boxSizing: 'border-box',
           resize: 'vertical', boxShadow: focused ? focusRing : 'none',
@@ -219,14 +219,14 @@ export function Select({ label, error, id, style, wrapStyle, children, ...rest }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: space.xs, ...wrapStyle }}>
       {label && (
-        <label htmlFor={selId} style={{ fontFamily: font.text, fontSize: 12, fontWeight: 600, color: color.darkGray }}>
+        <label htmlFor={selId} style={{ fontFamily: font.text, fontSize: 13, fontWeight: 600, color: color.darkGray }}>
           {label}
         </label>
       )}
       <select
         id={selId}
         style={{
-          fontFamily: font.text, fontSize: 14, minHeight: 40, padding: '8px 12px',
+          fontFamily: font.text, fontSize: 15, minHeight: 44, padding: '10px 14px',
           borderRadius: radius.primary, border: `1px solid ${borderColor}`,
           color: color.text, background: color.surface, outline: 'none', width: '100%',
           boxSizing: 'border-box', cursor: 'pointer', boxShadow: focused ? focusRing : 'none', ...style,
@@ -387,7 +387,7 @@ export function Modal({ open, onClose, title, size = 'md', width, footer, header
             display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: space.md,
             padding: `${space.lg} ${space.lg} ${space.base}`, borderBottom: `1px solid ${color.border}`,
           }}>
-            <h2 style={{ fontFamily: font.display, fontSize: 20, fontWeight: 600, color: color.text, margin: 0 }}>
+            <h2 style={{ fontFamily: font.display, fontSize: 22, fontWeight: 700, color: color.text, margin: 0 }}>
               {title}
             </h2>
             <div style={{ display: 'flex', alignItems: 'center', gap: space.sm }}>
@@ -482,7 +482,7 @@ export function MenuItem({ icon, danger, children, style, ...rest }) {
         display: 'flex', alignItems: 'center', gap: space.sm, width: '100%', textAlign: 'left',
         padding: '8px 12px', border: 'none', borderRadius: radius.base, cursor: 'pointer',
         background: hover ? color.surfaceAlt : 'transparent',
-        color: danger ? color.danger : color.text, fontFamily: font.text, fontSize: 14, ...style,
+        color: danger ? color.danger : color.text, fontFamily: font.text, fontSize: 15, ...style,
       }}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}

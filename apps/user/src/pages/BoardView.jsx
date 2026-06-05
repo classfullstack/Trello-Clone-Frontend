@@ -248,7 +248,7 @@ export function BoardView() {
       }}>
         <Link to="/" style={{ color: '#fff', fontSize: 14, opacity: 0.9 }}>Boards</Link>
         <span style={{ color: 'rgba(255,255,255,0.6)' }}>/</span>
-        <h1 style={{ fontFamily: font.display, fontSize: 20, fontWeight: 600, color: '#fff', margin: 0 }}>
+        <h1 style={{ fontFamily: font.display, fontSize: 24, fontWeight: 700, color: '#fff', margin: 0 }}>
           {board?.name ?? 'Board'}
         </h1>
         <span style={{ flex: 1 }} />
@@ -303,7 +303,7 @@ export function BoardView() {
       {!isLoading && !isError && (
         <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={onDragStart} onDragEnd={onDragEnd}>
           <div style={{
-            display: 'flex', gap: space.md, padding: '16px 24px 24px',
+            display: 'flex', gap: space.base, padding: '20px 24px 24px',
             overflowX: 'auto', overflowY: 'hidden', alignItems: 'flex-start', flex: 1, minHeight: 0,
           }}>
             <SortableContext items={lists.map((l) => `list:${l.id}`)} strategy={horizontalListSortingStrategy}>
@@ -322,10 +322,10 @@ export function BoardView() {
               ))}
             </SortableContext>
 
-            <div style={{ width: 280, flexShrink: 0 }}>
+            <div style={{ width: 296, flexShrink: 0 }}>
               {addingList ? (
                 <form onSubmit={submitList} style={{
-                  background: color.surface, borderRadius: radius.large, padding: space.sm,
+                  background: color.surface, borderRadius: radius.large, padding: space.md,
                   display: 'flex', flexDirection: 'column', gap: space.sm, boxShadow: shadow.base,
                 }}>
                   <Input autoFocus placeholder="Enter list name…" value={listName} onChange={(e) => setListName(e.target.value)} />
@@ -338,9 +338,9 @@ export function BoardView() {
                 <button
                   onClick={() => setAddingList(true)}
                   style={{
-                    display: 'flex', alignItems: 'center', gap: 6, width: '100%', textAlign: 'left',
-                    padding: space.md, border: 'none', background: 'rgba(255,255,255,0.24)', color: '#fff',
-                    borderRadius: radius.large, cursor: 'pointer', fontSize: 14, fontFamily: font.text, fontWeight: 500,
+                    display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left',
+                    padding: space.base, border: 'none', background: 'rgba(255,255,255,0.24)', color: '#fff',
+                    borderRadius: radius.large, cursor: 'pointer', fontSize: 15, fontFamily: font.text, fontWeight: 600,
                   }}
                 >
                   <Plus size={16} /> Add {lists.length ? 'another list' : 'a list'}
@@ -353,8 +353,8 @@ export function BoardView() {
             {activeCard && <CardTile card={activeCard} overlay />}
             {activeList && (
               <div style={{
-                width: 280, background: color.surfaceAlt, borderRadius: radius.large, padding: space.sm,
-                boxShadow: shadow.hover, fontFamily: font.text, fontWeight: 600, color: color.text,
+                width: 296, background: color.surfaceAlt, borderRadius: radius.large, padding: space.md,
+                boxShadow: shadow.hover, fontFamily: font.text, fontWeight: 600, fontSize: 15, color: color.text,
               }}>
                 {activeList.name}
               </div>

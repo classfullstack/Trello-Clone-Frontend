@@ -66,17 +66,17 @@ export function WorkspaceBoards() {
   const boards = [...(data ?? [])].sort((a, b) => (b.starred ? 1 : 0) - (a.starred ? 1 : 0));
 
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto', padding: `${space.xl} ${space.base}` }}>
-      <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 14, color: color.textMuted }}>
-        <ArrowLeft size={15} /> Workspaces
+    <div style={{ maxWidth: 1200, margin: '0 auto', padding: `${space.xxl} ${space.lg}` }}>
+      <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 15, color: color.textMuted }}>
+        <ArrowLeft size={16} /> Workspaces
       </Link>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: space.base, flexWrap: 'wrap' }}>
-        <h1 style={{ fontFamily: font.display, fontSize: 24, fontWeight: 600, color: color.text }}>Boards</h1>
+        <h1 style={{ fontFamily: font.display, fontSize: 30, fontWeight: 800, color: color.text, letterSpacing: '-0.5px' }}>Boards</h1>
         <Button variant="secondary" leftIcon={<Users size={16} />} onClick={() => setMembersOpen(true)}>Members</Button>
       </div>
       <WorkspaceMembers workspaceId={workspaceId} open={membersOpen} onClose={() => setMembersOpen(false)} />
 
-      <form onSubmit={onCreate} style={{ display: 'flex', gap: space.sm, maxWidth: 480, marginBottom: space.xl }}>
+      <form onSubmit={onCreate} style={{ display: 'flex', gap: space.sm, maxWidth: 560, marginTop: space.lg, marginBottom: space.xl }}>
         <Input placeholder="New board name" value={name} onChange={(e) => setName(e.target.value)} wrapStyle={{ flex: 1 }} />
         <Button type="submit" leftIcon={<Plus size={16} />} loading={create.isPending} disabled={!name.trim()} style={{ whiteSpace: 'nowrap' }}>Create</Button>
       </form>
@@ -91,7 +91,7 @@ export function WorkspaceBoards() {
         <EmptyState icon={<LayoutGrid size={36} />} title="No boards yet" description="Create one above to get started." />
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: space.base }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: space.lg }}>
         {boards.map((b, i) => (
           <BoardCard
             key={b.id} board={b} grad={boardBackgrounds[i % boardBackgrounds.length]}
@@ -137,9 +137,9 @@ function BoardCard({ board, grad, onOpen, onRename, onChangeBg, onArchive, onDel
       <button
         onClick={onOpen}
         style={{
-          width: '100%', textAlign: 'left', height: 100, borderRadius: radius.large,
-          background: board.background || grad, boxShadow: shadow.base, padding: space.base,
-          color: '#fff', fontFamily: font.display, fontSize: 18, fontWeight: 600,
+          width: '100%', textAlign: 'left', height: 120, borderRadius: radius.large,
+          background: board.background || grad, boxShadow: shadow.base, padding: space.lg,
+          color: '#fff', fontFamily: font.display, fontSize: 20, fontWeight: 700,
           display: 'flex', alignItems: 'flex-end', cursor: 'pointer', border: 'none',
           opacity: board.archived ? 0.55 : 1,
         }}
