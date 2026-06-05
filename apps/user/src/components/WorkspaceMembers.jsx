@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useId } from 'react';
+import { createPortal } from 'react-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { UserPlus, Search } from 'lucide-react';
 import {
@@ -34,17 +35,38 @@ function useUserSearch(term) {
 function InviteCombobox({ email, setEmail }) {
   const listboxId = useId();
   const ref = useRef(null);
+  const boxRef = useRef(null);
+  const menuRef = useRef(null);
   const [open, setOpen] = useState(false);
   const [focused, setFocused] = useState(false);
   const [highlight, setHighlight] = useState(-1);
+  const [coords, setCoords] = useState(null);
   const searchQ = useUserSearch(email);
   const results = searchQ.data ?? [];
 
+  const place = () => {
+    if (!boxRef.current) return;
+    const r = boxRef.current.getBoundingClientRect();
+    setCoords({ top: r.bottom + 4, left: r.left, width: r.width });
+  };
+
   useEffect(() => {
-    const onDoc = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const onDoc = (e) => {
+      if (ref.current?.contains(e.target) || menuRef.current?.contains(e.target)) return;
+      setOpen(false);
+    };
     document.addEventListener('mousedown', onDoc);
     return () => document.removeEventListener('mousedown', onDoc);
   }, []);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    place();
+    const onScroll = () => place();
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', onScroll);
+    return () => { window.removeEventListener('scroll', onScroll, true); window.removeEventListener('resize', onScroll); };
+  }, [open, results]);
 
   useEffect(() => { setHighlight(-1); }, [results]);
 
@@ -79,7 +101,7 @@ function InviteCombobox({ email, setEmail }) {
         style={{ display: 'block', fontFamily: font.text, fontSize: 13, fontWeight: 600, color: color.darkGray, marginBottom: space.xs }}>
         Invite by email
       </label>
-      <div style={{
+      <div ref={boxRef} style={{
         display: 'flex', alignItems: 'center', gap: space.sm, minHeight: 44,
         border: `1px solid ${borderColor}`, borderRadius: radius.primary, padding: '0 12px',
         background: color.surface, boxShadow: focused ? focusRing : 'none',
@@ -109,12 +131,13 @@ function InviteCombobox({ email, setEmail }) {
         {searchQ.isFetching && <Spinner size={16} />}
       </div>
 
-      {showMenu && (
+      {showMenu && coords && createPortal(
         <div
+          ref={menuRef}
           id={listboxId}
           role="listbox"
           style={{
-            position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 50,
+            position: 'fixed', top: coords.top, left: coords.left, width: coords.width, zIndex: 3000,
             background: color.surface, border: `1px solid ${color.border}`, borderRadius: radius.large,
             boxShadow: shadow.dropdown, padding: space.xs, maxHeight: 280, overflowY: 'auto',
           }}
@@ -153,7 +176,8 @@ function InviteCombobox({ email, setEmail }) {
               </div>
             </button>
           ))}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
@@ -193,7 +217,7 @@ export function WorkspaceMembers({ workspaceId, open, onClose }) {
   const members = membersQ.data ?? [];
 
   return (
-    <Modal open={open} onClose={onClose} title="Workspace members" size="md">
+    <Modal open={open} onClose={onClose} title="Workspace members" size="lg">
       <form onSubmit={onInvite} style={{ display: 'flex', gap: space.md, marginBottom: space.lg, alignItems: 'flex-end', flexWrap: 'wrap' }}>
         <div style={{ flex: 1, minWidth: 220 }}>
           <InviteCombobox email={email} setEmail={setEmail} />
