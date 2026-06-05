@@ -4,7 +4,7 @@ import {
   FileText, Activity as ActivityIcon, Copy, Eye, EyeOff, Check,
 } from 'lucide-react';
 import {
-  Modal, Button, Input, Textarea, Avatar, LabelChip, Spinner, IconButton, useConfirm,
+  Modal, Button, Input, Textarea, Avatar, LabelChip, Spinner, IconButton, useConfirm, useToast,
   color, font, space, radius,
 } from '@trello/ui';
 import {
@@ -420,6 +420,7 @@ function ActivitySection({ cardId }) {
 
 export function CardModal({ card, boardId, board, onClose }) {
   const confirm = useConfirm();
+  const toast = useToast();
   const update = useUpdateCard(boardId, { successMessage: null });
   const del = useDeleteCard(boardId);
   const duplicate = useDuplicateCard(boardId);
@@ -481,9 +482,18 @@ export function CardModal({ card, boardId, board, onClose }) {
   const comments = commentsQ.data ?? [];
   const checklists = full.checklists ?? [];
   const descDirty = description !== (full.description ?? '');
+  const currentDue = full.dueDate ? full.dueDate.slice(0, 10) : '';
 
-  const saveDescription = () => saveField({ description });
+  const saveDescription = () => update.mutate(
+    { cardId: card.id, patch: { description } },
+    { onSuccess: () => toast.success('Description saved.') },
+  );
   const cancelDescription = () => setDescription(full.description ?? '');
+
+  const saveDue = () => {
+    if (due === currentDue) return; // no change -> no write/activity
+    saveField({ dueDate: due ? new Date(`${due}T00:00:00`).toISOString() : null });
+  };
 
   return (
     <Modal open={!!card} onClose={onClose} width={940} title={null} padded>
@@ -556,7 +566,7 @@ export function CardModal({ card, boardId, board, onClose }) {
           <div><MembersEditor boardId={boardId} workspaceId={board?.workspaceId} card={full} /></div>
           <div>
             <div style={sectionLabel}>Due date</div>
-            <Input type="date" value={due} onChange={(e) => setDue(e.target.value)} onBlur={() => saveField({ dueDate: due || null })} />
+            <Input type="date" value={due} onChange={(e) => setDue(e.target.value)} onBlur={saveDue} />
           </div>
           <div style={{ borderTop: `1px solid ${color.border}`, paddingTop: space.base, display: 'flex', flexDirection: 'column', gap: space.sm }}>
             <Button variant="secondary" leftIcon={full.watching ? <EyeOff size={15} /> : <Eye size={15} />}
