@@ -9,7 +9,6 @@ export function LoginPage() {
   const toast = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [otp, setOtp] = useState('');
   const [errors, setErrors] = useState({});
   const [busy, setBusy] = useState(false);
 
@@ -27,10 +26,10 @@ export function LoginPage() {
     if (!validate()) return;
     setBusy(true);
     try {
-      await login(email.trim(), password, otp || undefined);
+      await login(email.trim(), password);
       navigate('/dashboard', { replace: true });
     } catch (err) {
-      const msg = err.response?.data?.message ?? 'Login failed. Check your credentials or 2FA code.';
+      const msg = err.response?.data?.message ?? 'Login failed. Check your credentials.';
       toast.error(msg);
     } finally {
       setBusy(false);
@@ -75,11 +74,6 @@ export function LoginPage() {
             <Input
               label="Password" type="password" placeholder="••••••••" autoComplete="current-password"
               value={password} onChange={(e) => setPassword(e.target.value)} error={errors.password}
-            />
-            <Input
-              label="2FA code" type="text" inputMode="numeric" placeholder="123456 (if enabled)"
-              value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-              helper="Leave blank if two-factor auth is not enabled."
             />
             <Button type="submit" fullWidth loading={busy} disabled={busy} style={{ marginTop: space.xs }}>
               {busy ? 'Signing in…' : 'Sign in'}
