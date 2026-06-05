@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
-  ArrowLeft, Plus, MoreHorizontal, Pencil, Trash2, Archive, ArchiveRestore, Image, AlertTriangle, LayoutGrid, Star,
+  ArrowLeft, Plus, MoreHorizontal, Pencil, Trash2, Archive, ArchiveRestore, Image, AlertTriangle, LayoutGrid, Star, Users,
 } from 'lucide-react';
 import {
   Button, Input, Modal, Spinner, EmptyState, IconButton, Dropdown, MenuItem, useConfirm,
@@ -10,6 +10,7 @@ import {
 } from '@trello/ui';
 import { api } from '../lib/api';
 import { useCreateBoard, useUpdateBoard, useDeleteBoard, useStarBoard } from '../lib/wsData';
+import { WorkspaceMembers } from '../components/WorkspaceMembers';
 
 async function fetchBoards(workspaceId) {
   const res = await api.get('/boards', { params: { workspaceId } });
@@ -23,6 +24,7 @@ export function WorkspaceBoards() {
   const [name, setName] = useState('');
   const [editing, setEditing] = useState(null); // { id, name }
   const [bgFor, setBgFor] = useState(null); // board id
+  const [membersOpen, setMembersOpen] = useState(false);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['boards', workspaceId],
@@ -68,7 +70,11 @@ export function WorkspaceBoards() {
       <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 14, color: color.textMuted }}>
         <ArrowLeft size={15} /> Workspaces
       </Link>
-      <h1 style={{ fontFamily: font.display, fontSize: 24, fontWeight: 600, color: color.text }}>Boards</h1>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: space.base, flexWrap: 'wrap' }}>
+        <h1 style={{ fontFamily: font.display, fontSize: 24, fontWeight: 600, color: color.text }}>Boards</h1>
+        <Button variant="secondary" leftIcon={<Users size={16} />} onClick={() => setMembersOpen(true)}>Members</Button>
+      </div>
+      <WorkspaceMembers workspaceId={workspaceId} open={membersOpen} onClose={() => setMembersOpen(false)} />
 
       <form onSubmit={onCreate} style={{ display: 'flex', gap: space.sm, maxWidth: 480, marginBottom: space.xl }}>
         <Input placeholder="New board name" value={name} onChange={(e) => setName(e.target.value)} wrapStyle={{ flex: 1 }} />

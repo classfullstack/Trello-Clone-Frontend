@@ -372,10 +372,16 @@ export function Modal({ open, onClose, title, size = 'md', width, footer, header
         aria-label={typeof title === 'string' ? title : undefined}
         style={{
           background: color.surface, borderRadius: radius.large, boxShadow: shadow.modal,
-          maxWidth, width: '100%', marginTop: '6vh', marginBottom: '6vh',
+          maxWidth, width: '100%', marginTop: '6vh', marginBottom: '6vh', position: 'relative',
           animation: 'trello-pop .14s ease', display: 'flex', flexDirection: 'column',
         }}
       >
+        {!(title || headerExtra) && (
+          <IconButton label="Close" onClick={onClose}
+            style={{ position: 'absolute', top: 12, right: 12, zIndex: 1 }}>
+            <X size={18} />
+          </IconButton>
+        )}
         {(title || headerExtra) && (
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: space.md,

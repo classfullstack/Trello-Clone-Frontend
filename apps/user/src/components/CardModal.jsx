@@ -14,7 +14,7 @@ import {
   useAttachments, useUploadAttachment, useDeleteAttachment, useDownloadAttachment,
   useCardActivity, useDuplicateCard, useWatchCard,
   useBoardMembers, useAddCardMember, useRemoveCardMember, useSetCardFieldValue,
-  useCreateBoardLabel, useDeleteBoardLabel,
+  useCreateBoardLabel, useDeleteBoardLabel, useWorkspaceMembers,
 } from '../lib/boardData';
 import { MentionInput } from './MentionInput';
 
@@ -218,18 +218,30 @@ function LabelsEditor({ boardId, card, boardLabels }) {
   );
 }
 
-function MembersEditor({ boardId, card }) {
-  const membersQ = useBoardMembers(boardId);
+function MembersEditor({ boardId, workspaceId, card }) {
+  const boardQ = useBoardMembers(boardId);
+  const wsQ = useWorkspaceMembers(workspaceId);
   const add = useAddCardMember(boardId, card.id);
   const remove = useRemoveCardMember(boardId, card.id);
+  const [picking, setPicking] = useState(false);
   const assigned = card.members ?? [];
   const assignedIds = new Set(assigned.map((m) => m.id));
-  const candidates = (membersQ.data ?? []).filter((u) => !assignedIds.has(u.id));
+
+  // Candidates = workspace + board members, de-duped, not already assigned.
+  const pool = new Map();
+  [...(wsQ.data ?? []), ...(boardQ.data ?? [])].forEach((u) => {
+    const id = u.id || u.userId;
+    if (id && !assignedIds.has(id)) pool.set(id, { id, name: u.name, email: u.email, avatarUrl: u.avatarUrl });
+  });
+  const candidates = [...pool.values()];
 
   return (
     <div>
-      <div style={sectionLabel}>Members</div>
-      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 6 }}>
+      <div style={{ ...sectionLabel, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span>Members</span>
+        <IconButton label="Add member" size={22} onClick={() => setPicking((v) => !v)}><Plus size={14} /></IconButton>
+      </div>
+      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: assigned.length ? 6 : 0 }}>
         {assigned.map((m) => (
           <span key={m.id} style={{ position: 'relative', display: 'inline-flex' }}>
             <Avatar name={m.name} email={m.email} src={m.avatarUrl} size={32} />
@@ -239,15 +251,18 @@ function MembersEditor({ boardId, card }) {
             </IconButton>
           </span>
         ))}
-        {assigned.length === 0 && <span style={{ fontSize: 13, color: color.textMuted }}>No members.</span>}
+        {assigned.length === 0 && !picking && <span style={{ fontSize: 13, color: color.textMuted }}>No members. Click + to add.</span>}
       </div>
-      {candidates.length > 0 && (
-        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+      {picking && (
+        <div style={{ border: `1px solid ${color.border}`, borderRadius: radius.large, padding: space.sm, background: color.surfaceAlt, marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {candidates.length === 0 && (
+            <span style={{ fontSize: 12, color: color.textMuted }}>No one to add. Invite people via the workspace “Members” button.</span>
+          )}
           {candidates.map((u) => (
             <button key={u.id} onClick={() => add.mutate(u.id)} aria-label={`Assign ${u.name || u.email}`}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 4, border: `1px solid ${color.border}`, background: color.surface, borderRadius: radius.pill, padding: '2px 8px 2px 2px', cursor: 'pointer' }}>
-              <Avatar name={u.name} email={u.email} src={u.avatarUrl} size={22} />
-              <span style={{ fontSize: 12, color: color.text }}>{u.name || u.email}</span>
+              style={{ display: 'flex', alignItems: 'center', gap: 8, border: 'none', background: 'transparent', borderRadius: radius.base, padding: 4, cursor: 'pointer', textAlign: 'left' }}>
+              <Avatar name={u.name} email={u.email} src={u.avatarUrl} size={26} />
+              <span style={{ fontSize: 13, color: color.text }}>{u.name || u.email}</span>
             </button>
           ))}
         </div>
@@ -538,7 +553,7 @@ export function CardModal({ card, boardId, board, onClose }) {
         {/* Sidebar column */}
         <div className="cm-side" style={{ width: 280, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: space.lg }}>
           <div><LabelsEditor boardId={boardId} card={full} boardLabels={boardLabels} /></div>
-          <div><MembersEditor boardId={boardId} card={full} /></div>
+          <div><MembersEditor boardId={boardId} workspaceId={board?.workspaceId} card={full} /></div>
           <div>
             <div style={sectionLabel}>Due date</div>
             <Input type="date" value={due} onChange={(e) => setDue(e.target.value)} onBlur={() => saveField({ dueDate: due || null })} />
