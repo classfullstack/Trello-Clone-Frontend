@@ -308,6 +308,7 @@ function hashColor(str) {
 }
 
 export function Avatar({ name, email, src, size = 32, style, title }) {
+  const [failed, setFailed] = useState(false);
   const label = name || email || '?';
   const initials = label.trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase() || '?';
   const base = {
@@ -316,8 +317,14 @@ export function Avatar({ name, email, src, size = 32, style, title }) {
     fontFamily: font.text, fontWeight: 600, fontSize: Math.round(size * 0.42),
     color: color.white, userSelect: 'none', ...style,
   };
-  if (src) {
-    return <img src={src} alt={label} title={title ?? label} style={{ ...base, objectFit: 'cover' }} />;
+  if (src && !failed) {
+    return (
+      <img
+        src={src} alt={label} title={title ?? label}
+        onError={() => setFailed(true)}
+        style={{ ...base, objectFit: 'cover' }}
+      />
+    );
   }
   return <span title={title ?? label} style={{ ...base, background: hashColor(label) }}>{initials}</span>;
 }
