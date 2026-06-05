@@ -8,6 +8,7 @@ import { LoginPage } from './pages/Login';
 import { DashboardPage } from './pages/Dashboard';
 import { UsersPage } from './pages/Users';
 import { WorkspacesPage } from './pages/Workspaces';
+import { StoragePage } from './pages/Storage';
 import { AuditPage } from './pages/Audit';
 import { ProfilePage } from './pages/Profile';
 import { SettingsPage } from './pages/Settings';
@@ -48,6 +49,14 @@ export function App() {
           element={
             <RequirePermission role={['super_admin', 'admin']}>
               <WorkspacesPage />
+            </RequirePermission>
+          }
+        />
+        <Route
+          path="/storage"
+          element={
+            <RequirePermission permission="storage.view" role={['super_admin', 'admin']}>
+              <StoragePage />
             </RequirePermission>
           }
         />

@@ -26,7 +26,8 @@ export function CardTile({ card, onClick, overlay = false }) {
     background: color.surface,
     borderRadius: radius.large,
     boxShadow: overlay ? shadow.hover : shadow.subtle,
-    padding: '8px 10px',
+    padding: card.coverUrl ? 0 : '8px 10px',
+    overflow: 'hidden',
     marginBottom: space.sm,
     cursor: overlay ? 'grabbing' : 'pointer',
     fontFamily: font.text,
@@ -45,6 +46,10 @@ export function CardTile({ card, onClick, overlay = false }) {
 
   return (
     <div ref={overlay ? undefined : setNodeRef} style={style} {...(overlay ? {} : attributes)} {...(overlay ? {} : listeners)} onClick={onClick}>
+      {card.coverUrl && (
+        <img src={card.coverUrl} alt="" style={{ width: '100%', height: 120, objectFit: 'cover', display: 'block' }} />
+      )}
+      <div style={{ padding: card.coverUrl ? '8px 10px' : 0 }}>
       {labels.length > 0 && (
         <div style={{ display: 'flex', gap: 4, marginBottom: 6, flexWrap: 'wrap' }}>
           {labels.map((l) => <LabelChip key={l.id} color={l.color} name={l.name} compact />)}
@@ -81,6 +86,7 @@ export function CardTile({ card, onClick, overlay = false }) {
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }

@@ -295,6 +295,87 @@ export function useDeleteChecklistItem(cardId) {
   });
 }
 
+/* -------------------------------------------------------------- Attachments */
+
+export function useAttachments(cardId) {
+  return useQuery({
+    queryKey: ['attachments', cardId],
+    queryFn: async () => {
+      const res = await api.get(`/cards/${cardId}/attachments`);
+      return unwrap(res.data);
+    },
+    enabled: !!cardId,
+  });
+}
+
+// Presign -> PUT to MinIO -> create row. Reports via toast.
+export function useUploadAttachment(boardId, cardId) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  return useMutation({
+    mutationFn: async (file) => {
+      const presignRes = await api.post(`/cards/${cardId}/attachments/presign`, {
+        filename: file.name, contentType: file.type, size: file.size,
+      });
+      const { uploadUrl, key, fileUrl } = presignRes.data;
+      await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: file.type ? { 'Content-Type': file.type } : {},
+        body: file,
+      });
+      const res = await api.post(`/cards/${cardId}/attachments`, {
+        key, filename: file.name, size: file.size, mime: file.type, fileUrl,
+      });
+      return res.data;
+    },
+    onSuccess: () => {
+      toast.success('Attachment uploaded.');
+      qc.invalidateQueries({ queryKey: ['attachments', cardId] });
+      invalidateBoard(qc, boardId);
+    },
+    onError: () => toast.error('Could not upload attachment.'),
+  });
+}
+
+export function useDeleteAttachment(boardId, cardId) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  return useMutation({
+    mutationFn: (attachmentId) => api.delete(`/attachments/${attachmentId}`),
+    onSuccess: () => {
+      toast.success('Attachment removed.');
+      qc.invalidateQueries({ queryKey: ['attachments', cardId] });
+      invalidateBoard(qc, boardId);
+    },
+    onError: () => toast.error('Could not remove attachment.'),
+  });
+}
+
+export function useDownloadAttachment() {
+  const toast = useToast();
+  return useMutation({
+    mutationFn: (attachmentId) => api.get(`/attachments/${attachmentId}/download`),
+    onSuccess: (res) => {
+      const url = res.data?.url;
+      if (url) window.open(url, '_blank', 'noopener');
+    },
+    onError: () => toast.error('Could not download attachment.'),
+  });
+}
+
+/* ----------------------------------------------------------------- Activity */
+
+export function useCardActivity(cardId) {
+  return useQuery({
+    queryKey: ['activity', cardId],
+    queryFn: async () => {
+      const res = await api.get(`/cards/${cardId}/activity`);
+      return unwrap(res.data);
+    },
+    enabled: !!cardId,
+  });
+}
+
 /* ------------------------------------------------------------------- Labels */
 
 export function useAddCardLabel(boardId, cardId) {

@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  Button, Badge, Modal, Select, Input, Avatar, Dropdown, MenuItem, IconButton,
-  usePermission, useToast, useConfirm, color, space, font,
+  Button, Badge, Modal, Select, Input, Avatar, Dropdown, MenuItem, IconButton, Spinner,
+  usePermission, useToast, useConfirm, setAccessToken, color, space, font,
 } from '@trello/ui';
 import {
-  MoreHorizontal, ShieldCheck, Ban, CheckCircle2, UserX,
+  MoreHorizontal, ShieldCheck, Ban, CheckCircle2, UserX, Eye, KeyRound, Trash2, LogIn, Copy,
 } from 'lucide-react';
 import { api, SYSTEM_ROLES } from '../lib/api';
 import { PageHeader, SearchInput } from '../components/Layout';
@@ -29,6 +29,8 @@ export function UsersPage() {
   const [roleTarget, setRoleTarget] = useState(null);
   const [roleKey, setRoleKey] = useState('admin');
   const [tenantId, setTenantId] = useState('');
+  const [detailId, setDetailId] = useState(null);
+  const [pwResult, setPwResult] = useState(null);
 
   // debounce-ish: commit search on submit / enter
   const onSearchChange = (e) => {
@@ -79,9 +81,82 @@ export function UsersPage() {
     onError: (err) => toast.error(err.response?.data?.message ?? 'Action failed.'),
   });
 
+  const detail = useQuery({
+    queryKey: ['admin', 'user', detailId],
+    enabled: !!detailId,
+    queryFn: async () => (await api.get(`/admin/users/${detailId}`)).data,
+  });
+
+  const resetPw = useMutation({
+    mutationFn: (id) => api.post(`/admin/users/${id}/reset-password`, {}),
+    onSuccess: (res, id) => {
+      const u = (data?.data ?? []).find((x) => x.id === id);
+      setPwResult({ email: u?.email ?? id, password: res.data?.password });
+    },
+    onError: (err) => toast.error(err.response?.data?.message ?? 'Reset failed.'),
+  });
+
+  const onResetClick = async (u) => {
+    const ok = await confirm({
+      title: 'Reset password',
+      message: `Generate a new password for ${u.email}? They will be signed out everywhere.`,
+      confirmText: 'Reset password',
+      danger: true,
+    });
+    if (ok) resetPw.mutate(u.id);
+  };
+
+  const del = useMutation({
+    mutationFn: (id) => api.delete(`/admin/users/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'users'] });
+      qc.invalidateQueries({ queryKey: ['admin', 'stats'] });
+      toast.success('User deleted.');
+    },
+    onError: (err) => toast.error(err.response?.data?.message ?? 'Delete failed.'),
+  });
+
+  const onDeleteClick = async (u) => {
+    const ok = await confirm({
+      title: 'Delete user',
+      message: `Permanently delete ${u.email}? This cannot be undone.`,
+      confirmText: 'Delete permanently',
+      danger: true,
+    });
+    if (ok) del.mutate(u.id);
+  };
+
+  const impersonate = useMutation({
+    mutationFn: (id) => api.post(`/admin/users/${id}/impersonate`),
+    onSuccess: (res) => {
+      const token = res.data?.accessToken;
+      if (token) {
+        setAccessToken(token);
+        toast.success(`Impersonating ${res.data?.user?.email ?? 'user'}. Opening user app…`);
+        window.open('/', '_blank', 'noopener');
+      } else {
+        toast.success('Impersonation token issued.');
+      }
+    },
+    onError: (err) => toast.error(err.response?.data?.message ?? 'Impersonation failed.'),
+  });
+
+  const onImpersonateClick = async (u) => {
+    const ok = await confirm({
+      title: 'Impersonate user',
+      message: `Sign in as ${u.email}? This action is audited.`,
+      confirmText: 'Impersonate',
+      danger: true,
+    });
+    if (ok) impersonate.mutate(u.id);
+  };
+
   const canSuspend = can('users.suspend');
   const canAssign = can('roles.assign');
-  const hasActions = canSuspend || canAssign;
+  const canReset = can('users.reset_password');
+  const canDelete = can('users.delete');
+  const canImpersonate = can('users.impersonate');
+  const hasActions = true;
 
   const isActive = (u) => u.isActive !== false;
 
@@ -122,15 +197,25 @@ export function UsersPage() {
         <Dropdown align="right" width={200} trigger={
           <IconButton label="Actions"><MoreHorizontal size={18} /></IconButton>
         }>
+          <MenuItem icon={<Eye size={16} />} onClick={() => setDetailId(u.id)}>View details</MenuItem>
           {canAssign && (
             <MenuItem icon={<ShieldCheck size={16} />} onClick={() => { setRoleTarget(u); setRoleKey('admin'); setTenantId(''); }}>
               Assign role
             </MenuItem>
           )}
+          {canReset && (
+            <MenuItem icon={<KeyRound size={16} />} onClick={() => onResetClick(u)}>Reset password</MenuItem>
+          )}
+          {canImpersonate && (
+            <MenuItem icon={<LogIn size={16} />} onClick={() => onImpersonateClick(u)}>Impersonate</MenuItem>
+          )}
           {canSuspend && (
             isActive(u)
               ? <MenuItem icon={<Ban size={16} />} danger onClick={() => onSuspendClick(u, true)}>Suspend user</MenuItem>
               : <MenuItem icon={<CheckCircle2 size={16} />} onClick={() => onSuspendClick(u, false)}>Reinstate user</MenuItem>
+          )}
+          {canDelete && (
+            <MenuItem icon={<Trash2 size={16} />} danger onClick={() => onDeleteClick(u)}>Delete user</MenuItem>
           )}
         </Dropdown>
       ),
@@ -203,6 +288,113 @@ export function UsersPage() {
           )}
         </div>
       </Modal>
+
+      {/* User detail */}
+      <Modal
+        open={!!detailId}
+        onClose={() => setDetailId(null)}
+        title="User details"
+        size="lg"
+        footer={<Button variant="ghost" onClick={() => setDetailId(null)}>Close</Button>}
+      >
+        {detail.isLoading && (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: space.xl }}><Spinner size={28} /></div>
+        )}
+        {detail.isError && (
+          <p style={{ color: color.danger, fontFamily: font.text }}>Failed to load user details.</p>
+        )}
+        {detail.data && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: space.lg, fontFamily: font.text }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: space.base }}>
+              <Avatar name={detail.data.name} email={detail.data.email} src={detail.data.avatarUrl} size={48} />
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 16, color: color.text }}>{detail.data.name || detail.data.email}</div>
+                <div style={{ color: color.textMuted, fontSize: 13 }}>{detail.data.email}</div>
+              </div>
+              <div style={{ marginLeft: 'auto' }}>
+                <Badge kind={detail.data.isActive ? 'success' : 'error'}>{detail.data.isActive ? 'Active' : 'Suspended'}</Badge>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: space.base }}>
+              <Stat label="Joined" value={fmtDate(detail.data.createdAt)} />
+              <Stat label="Recent activity" value={`${detail.data.activityCount ?? 0} events`} />
+            </div>
+
+            <Section title="Roles">
+              {(detail.data.roles ?? []).length === 0
+                ? <span style={{ color: color.mediumGray, fontSize: 13 }}>none</span>
+                : (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: space.xs }}>
+                    {detail.data.roles.map((r, i) => (
+                      <Badge key={`${r.key}-${i}`} kind={ELEVATED.has(r.key) ? 'primary' : 'default'}>
+                        {r.key}{r.tenantId ? ` @ ${r.tenantId.slice(0, 8)}` : ''}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+            </Section>
+
+            <Section title={`Owned workspaces (${detail.data.ownedWorkspaces?.length ?? 0})`}>
+              <WsList items={detail.data.ownedWorkspaces} />
+            </Section>
+            <Section title={`Member of (${detail.data.memberWorkspaces?.length ?? 0})`}>
+              <WsList items={detail.data.memberWorkspaces} />
+            </Section>
+          </div>
+        )}
+      </Modal>
+
+      {/* New password result */}
+      <Modal
+        open={!!pwResult}
+        onClose={() => setPwResult(null)}
+        title="New password"
+        footer={<Button onClick={() => setPwResult(null)}>Done</Button>}
+      >
+        <p style={{ fontFamily: font.text, color: color.textMuted, marginTop: 0 }}>
+          A new password was set for <strong>{pwResult?.email}</strong>. Copy it now — it will not be shown again.
+        </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: space.sm }}>
+          <code style={{
+            flex: 1, padding: '10px 12px', borderRadius: 6, background: color.surfaceAlt,
+            border: `1px solid ${color.border}`, color: color.text, fontSize: 15, wordBreak: 'break-all',
+          }}>{pwResult?.password}</code>
+          <IconButton label="Copy" onClick={() => {
+            navigator.clipboard?.writeText(pwResult?.password ?? '');
+            toast.success('Copied.');
+          }}><Copy size={18} /></IconButton>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+function Stat({ label, value }) {
+  return (
+    <div style={{ background: color.surfaceAlt, borderRadius: 6, padding: '10px 12px' }}>
+      <div style={{ color: color.textMuted, fontSize: 12 }}>{label}</div>
+      <div style={{ color: color.text, fontWeight: 600, fontSize: 14 }}>{value}</div>
+    </div>
+  );
+}
+
+function Section({ title, children }) {
+  return (
+    <div>
+      <div style={{ fontSize: 13, fontWeight: 600, color: color.textMuted, marginBottom: space.sm }}>{title}</div>
+      {children}
+    </div>
+  );
+}
+
+function WsList({ items }) {
+  if (!items || items.length === 0) return <span style={{ color: color.mediumGray, fontSize: 13 }}>none</span>;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      {items.map((w) => (
+        <div key={w.id} style={{ color: color.text, fontSize: 13 }}>{w.name}</div>
+      ))}
     </div>
   );
 }

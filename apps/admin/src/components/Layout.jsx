@@ -5,7 +5,7 @@ import {
   color, space, font, radius, shadow,
 } from '@trello/ui';
 import {
-  LayoutDashboard, Users, KanbanSquare, ScrollText,
+  LayoutDashboard, Users, KanbanSquare, ScrollText, HardDrive,
   LogOut, Shield, Menu, Search, User, Settings,
 } from 'lucide-react';
 
@@ -13,6 +13,7 @@ const NAV = [
   { to: '/dashboard', label: 'Dashboard', Icon: LayoutDashboard },
   { to: '/users', label: 'Users', Icon: Users },
   { to: '/workspaces', label: 'Workspaces', Icon: KanbanSquare },
+  { to: '/storage', label: 'Storage', Icon: HardDrive },
   { to: '/audit', label: 'Audit Log', Icon: ScrollText },
 ];
 

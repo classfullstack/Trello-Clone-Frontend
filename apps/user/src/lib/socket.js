@@ -34,6 +34,7 @@ export function useBoardSocket(boardId) {
     const events = [
       'card:created', 'card:updated', 'card:moved', 'card:deleted',
       'list:created', 'list:updated', 'list:deleted', 'comment:created',
+      'attachment:created', 'attachment:deleted',
     ];
 
     const join = () => s.emit('board:join', { boardId });

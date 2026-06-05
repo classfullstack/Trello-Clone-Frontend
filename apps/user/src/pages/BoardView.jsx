@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { Link, useParams, useNavigate } from 'react-router-dom';
+import { useState, useMemo, useEffect } from 'react';
+import { Link, useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors, closestCorners,
 } from '@dnd-kit/core';
@@ -8,9 +8,10 @@ import {
 } from '@dnd-kit/sortable';
 import {
   Plus, MoreHorizontal, Pencil, Image, Archive, ArchiveRestore, Trash2, AlertTriangle,
+  Filter as FilterIcon, X,
 } from 'lucide-react';
 import {
-  Button, Input, Modal, Spinner, EmptyState, IconButton, Dropdown, MenuItem, useConfirm,
+  Button, Input, Modal, Spinner, EmptyState, IconButton, Dropdown, MenuItem, LabelChip, Avatar, useConfirm,
   color, font, radius, shadow, space, boardBackgrounds,
 } from '@trello/ui';
 import {
@@ -24,13 +25,63 @@ import { ListColumn } from '../components/ListColumn';
 import { CardTile } from '../components/CardTile';
 import { CardModal } from '../components/CardModal';
 
+const EMPTY_FILTER = { text: '', labelIds: [], memberIds: [], due: '' };
+
+function dueBucket(dueDate) {
+  if (!dueDate) return 'none';
+  const d = new Date(dueDate);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const day = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  if (day < today) return 'overdue';
+  if (day.getTime() === today.getTime()) return 'today';
+  const weekEnd = new Date(today); weekEnd.setDate(weekEnd.getDate() + 7);
+  if (day <= weekEnd) return 'week';
+  return 'later';
+}
+
+function matchesFilter(card, f) {
+  if (f.text && !card.title?.toLowerCase().includes(f.text.toLowerCase())) return false;
+  if (f.labelIds.length) {
+    const ids = new Set((card.labels ?? []).map((l) => l.id));
+    if (!f.labelIds.some((id) => ids.has(id))) return false;
+  }
+  if (f.memberIds.length) {
+    const ids = new Set((card.members ?? []).map((m) => m.id));
+    if (!f.memberIds.some((id) => ids.has(id))) return false;
+  }
+  if (f.due) {
+    const bucket = dueBucket(card.dueDate);
+    if (f.due === 'none' && bucket !== 'none') return false;
+    if (f.due === 'overdue' && bucket !== 'overdue') return false;
+    if (f.due === 'today' && bucket !== 'today') return false;
+    if (f.due === 'week' && !['overdue', 'today', 'week'].includes(bucket)) return false;
+  }
+  return true;
+}
+
 export function BoardView() {
   const { boardId = '' } = useParams();
   const navigate = useNavigate();
   const confirm = useConfirm();
+  const [searchParams, setSearchParams] = useSearchParams();
   useBoardSocket(boardId);
 
   const { board, lists, cards, isLoading, isError } = useBoardData(boardId);
+  const [filter, setFilter] = useState(EMPTY_FILTER);
+  const activeFilterCount =
+    (filter.text ? 1 : 0) + filter.labelIds.length + filter.memberIds.length + (filter.due ? 1 : 0);
+
+  const boardMembers = useMemo(() => {
+    const m = new Map();
+    cards.forEach((c) => (c.members ?? []).forEach((u) => m.set(u.id, u)));
+    return [...m.values()];
+  }, [cards]);
+
+  const visibleCards = useMemo(
+    () => (activeFilterCount ? cards.filter((c) => matchesFilter(c, filter)) : cards),
+    [cards, filter, activeFilterCount],
+  );
   const createList = useCreateList(boardId);
   const renameList = useUpdateList(boardId, { successMessage: 'List renamed.' });
   const archiveList = useUpdateList(boardId, { successMessage: 'List archived.' });
@@ -55,14 +106,27 @@ export function BoardView() {
   const cardsByList = useMemo(() => {
     const map = new Map();
     lists.forEach((l) => map.set(l.id, []));
-    cards.forEach((c) => {
+    visibleCards.forEach((c) => {
       const arr = map.get(c.listId) ?? [];
       arr.push(c);
       map.set(c.listId, arr);
     });
     map.forEach((arr) => arr.sort((a, b) => a.position - b.position));
     return map;
-  }, [lists, cards]);
+  }, [lists, visibleCards]);
+
+  // Open a card from the ?card=<id> query param (e.g. navigated from search).
+  useEffect(() => {
+    const cardId = searchParams.get('card');
+    if (cardId && cards.length) {
+      const c = cards.find((x) => x.id === cardId);
+      if (c) {
+        setOpenCard(c);
+        searchParams.delete('card');
+        setSearchParams(searchParams, { replace: true });
+      }
+    }
+  }, [searchParams, cards, setSearchParams]);
 
   const findCard = (id) => cards.find((c) => c.id === id) ?? null;
   const listIdFromSortable = (id) => String(id).replace(/^list:/, '');
@@ -175,6 +239,16 @@ export function BoardView() {
         </h1>
         <span style={{ flex: 1 }} />
         {board && (
+          <FilterBar
+            filter={filter}
+            setFilter={setFilter}
+            labels={board.labels ?? []}
+            members={boardMembers}
+            count={activeFilterCount}
+            onClear={() => setFilter(EMPTY_FILTER)}
+          />
+        )}
+        {board && (
           <Dropdown
             align="right" width={190}
             trigger={<IconButton label="Board actions" style={{ color: '#fff', background: 'rgba(255,255,255,0.18)' }}><MoreHorizontal size={18} /></IconButton>}
@@ -286,5 +360,109 @@ export function BoardView() {
 
       <CardModal card={openCard} boardId={boardId} board={board} onClose={() => setOpenCard(null)} />
     </div>
+  );
+}
+
+const DUE_OPTIONS = [
+  { key: 'overdue', label: 'Overdue' },
+  { key: 'today', label: 'Due today' },
+  { key: 'week', label: 'Due this week' },
+  { key: 'none', label: 'No due date' },
+];
+
+function FilterBar({ filter, setFilter, labels, members, count, onClear }) {
+  const toggle = (field, id) => setFilter((f) => {
+    const set = new Set(f[field]);
+    if (set.has(id)) set.delete(id); else set.add(id);
+    return { ...f, [field]: [...set] };
+  });
+
+  const heading = { fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: color.textMuted, margin: '10px 0 6px' };
+
+  return (
+    <Dropdown
+      align="right"
+      width={280}
+      trigger={
+        <button style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6, height: 32, padding: '0 12px',
+          border: 'none', borderRadius: radius.base, cursor: 'pointer', fontFamily: font.text, fontSize: 14,
+          color: '#fff', background: count ? color.blue : 'rgba(255,255,255,0.18)',
+        }}>
+          <FilterIcon size={15} /> Filter
+          {count > 0 && (
+            <span style={{
+              background: '#fff', color: color.blue, borderRadius: radius.pill, fontSize: 11,
+              fontWeight: 700, padding: '0 6px', lineHeight: '16px',
+            }}>{count}</span>
+          )}
+        </button>
+      }
+    >
+      <div onClick={(e) => e.stopPropagation()} style={{ padding: '4px 12px 12px', maxHeight: 420, overflowY: 'auto' }}>
+        <div style={heading}>Keyword</div>
+        <Input placeholder="Filter cards…" value={filter.text} onChange={(e) => setFilter((f) => ({ ...f, text: e.target.value }))} />
+
+        {labels.length > 0 && (
+          <>
+            <div style={heading}>Labels</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {labels.map((l) => {
+                const on = filter.labelIds.includes(l.id);
+                return (
+                  <button key={l.id} onClick={() => toggle('labelIds', l.id)} style={{
+                    border: on ? `2px solid ${color.blue}` : `2px solid transparent`,
+                    background: 'transparent', borderRadius: radius.base, padding: 0, cursor: 'pointer',
+                  }}>
+                    <LabelChip color={l.color} name={l.name} />
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {members.length > 0 && (
+          <>
+            <div style={heading}>Members</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {members.map((m) => {
+                const on = filter.memberIds.includes(m.id);
+                return (
+                  <button key={m.id} onClick={() => toggle('memberIds', m.id)} style={{
+                    display: 'flex', alignItems: 'center', gap: space.sm, border: 'none', cursor: 'pointer',
+                    background: on ? color.surfaceAlt : 'transparent', borderRadius: radius.base, padding: '4px 6px',
+                    fontFamily: font.text, fontSize: 13, color: color.text, textAlign: 'left',
+                  }}>
+                    <input type="checkbox" readOnly checked={on} />
+                    <Avatar name={m.name} email={m.email} src={m.avatarUrl} size={24} />
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.name || m.email}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        <div style={heading}>Due date</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {DUE_OPTIONS.map((o) => (
+            <button key={o.key} onClick={() => setFilter((f) => ({ ...f, due: f.due === o.key ? '' : o.key }))} style={{
+              display: 'flex', alignItems: 'center', gap: space.sm, border: 'none', cursor: 'pointer',
+              background: filter.due === o.key ? color.surfaceAlt : 'transparent', borderRadius: radius.base,
+              padding: '6px', fontFamily: font.text, fontSize: 13, color: color.text, textAlign: 'left',
+            }}>
+              <input type="radio" readOnly checked={filter.due === o.key} /> {o.label}
+            </button>
+          ))}
+        </div>
+
+        {count > 0 && (
+          <Button variant="ghost" size="sm" leftIcon={<X size={14} />} onClick={onClear} style={{ marginTop: 10, width: '100%' }}>
+            Clear filters
+          </Button>
+        )}
+      </div>
+    </Dropdown>
   );
 }

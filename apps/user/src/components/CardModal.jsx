@@ -1,5 +1,8 @@
-import { useState, useEffect } from 'react';
-import { Plus, Trash2, Pencil, X, Archive } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import {
+  Plus, Trash2, Pencil, X, Archive, Paperclip, Download, Image as ImageIcon,
+  FileText, Activity as ActivityIcon,
+} from 'lucide-react';
 import {
   Modal, Button, Input, Textarea, Avatar, LabelChip, Spinner, IconButton, useConfirm,
   color, font, space, radius,
@@ -8,6 +11,8 @@ import {
   useUpdateCard, useDeleteCard, useCardDetail, useComments, useAddComment,
   useEditComment, useDeleteComment, useToggleChecklistItem, useAddChecklistItem,
   useDeleteChecklistItem, useAddCardLabel, useRemoveCardLabel,
+  useAttachments, useUploadAttachment, useDeleteAttachment, useDownloadAttachment,
+  useCardActivity,
 } from '../lib/boardData';
 
 const sectionLabel = { fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', color: color.textMuted, marginBottom: 8 };
@@ -169,6 +174,116 @@ function LabelsEditor({ boardId, card, boardLabels }) {
   );
 }
 
+function formatSize(bytes) {
+  if (!bytes) return '';
+  const u = ['B', 'KB', 'MB', 'GB'];
+  let n = bytes;
+  let i = 0;
+  while (n >= 1024 && i < u.length - 1) { n /= 1024; i += 1; }
+  return `${n.toFixed(n >= 10 || i === 0 ? 0 : 1)} ${u[i]}`;
+}
+
+const isImage = (mime) => typeof mime === 'string' && mime.startsWith('image/');
+
+function AttachmentsSection({ boardId, card, onSetCover }) {
+  const confirm = useConfirm();
+  const attsQ = useAttachments(card.id);
+  const upload = useUploadAttachment(boardId, card.id);
+  const del = useDeleteAttachment(boardId, card.id);
+  const download = useDownloadAttachment();
+  const fileRef = useRef(null);
+  const atts = attsQ.data ?? [];
+
+  const onPick = (e) => {
+    const file = e.target.files?.[0];
+    if (file) upload.mutate(file);
+    e.target.value = '';
+  };
+
+  const onDelete = async (a) => {
+    const ok = await confirm({ title: 'Delete attachment?', message: `"${a.filename}" will be removed.`, confirmText: 'Delete', danger: true });
+    if (ok) del.mutate(a.id);
+  };
+
+  return (
+    <div style={{ marginBottom: space.lg }}>
+      <div style={sectionLabel}>Attachments</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: space.sm }}>
+        {atts.map((a) => (
+          <div key={a.id} style={{
+            display: 'flex', alignItems: 'center', gap: space.sm, padding: 6,
+            border: `1px solid ${color.border}`, borderRadius: radius.large, background: color.surfaceAlt,
+          }}>
+            <div style={{
+              width: 48, height: 40, borderRadius: radius.base, flexShrink: 0, overflow: 'hidden',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', background: color.surface,
+            }}>
+              {isImage(a.mime) && a.fileUrl
+                ? <img src={a.fileUrl} alt={a.filename} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : (isImage(a.mime) ? <ImageIcon size={18} color={color.textMuted} /> : <FileText size={18} color={color.textMuted} />)}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: color.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.filename}</div>
+              <div style={{ fontSize: 11, color: color.textMuted }}>{formatSize(a.size)}</div>
+            </div>
+            {isImage(a.mime) && (
+              <Button size="sm" variant="ghost" onClick={() => onSetCover(a)} style={{ whiteSpace: 'nowrap' }}>Make cover</Button>
+            )}
+            <IconButton label="Download" size={28} onClick={() => download.mutate(a.id)}><Download size={14} /></IconButton>
+            <IconButton label="Delete attachment" size={28} onClick={() => onDelete(a)}><Trash2 size={14} /></IconButton>
+          </div>
+        ))}
+        {!attsQ.isLoading && atts.length === 0 && (
+          <div style={{ fontSize: 13, color: color.textMuted }}>No attachments.</div>
+        )}
+      </div>
+      <input ref={fileRef} type="file" style={{ display: 'none' }} onChange={onPick} />
+      <button onClick={() => fileRef.current?.click()} disabled={upload.isPending} style={{ ...linkBtn, marginTop: space.sm }}>
+        <Paperclip size={13} /> {upload.isPending ? 'Uploading…' : 'Add attachment'}
+      </button>
+    </div>
+  );
+}
+
+function humanizeActivity(a) {
+  const who = a.actor?.name || 'Someone';
+  switch (a.action) {
+    case 'card.created': return `${who} created this card`;
+    case 'card.updated': return `${who} updated this card`;
+    case 'card.moved': return `${who} moved this card`;
+    case 'comment.created': return `${who} commented`;
+    case 'attachment.added': return `${who} added an attachment${a.metadata?.filename ? `: ${a.metadata.filename}` : ''}`;
+    default: return `${who} ${a.action}`;
+  }
+}
+
+function ActivitySection({ cardId }) {
+  const actQ = useCardActivity(cardId);
+  const items = actQ.data ?? [];
+  return (
+    <div style={{ marginBottom: space.lg }}>
+      <div style={{ ...sectionLabel, display: 'flex', alignItems: 'center', gap: 4 }}>
+        <ActivityIcon size={13} /> Activity
+      </div>
+      {actQ.isLoading && <Spinner size={16} />}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: space.sm }}>
+        {items.map((a) => (
+          <div key={a.id} style={{ display: 'flex', gap: space.sm, alignItems: 'flex-start' }}>
+            <Avatar name={a.actor?.name} src={a.actor?.avatarUrl} size={24} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, color: color.text }}>{humanizeActivity(a)}</div>
+              <div style={{ fontSize: 11, color: color.textMuted }}>{a.createdAt ? new Date(a.createdAt).toLocaleString() : ''}</div>
+            </div>
+          </div>
+        ))}
+        {!actQ.isLoading && items.length === 0 && (
+          <div style={{ fontSize: 13, color: color.textMuted }}>No activity yet.</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function CardModal({ card, boardId, board, onClose }) {
   const confirm = useConfirm();
   const update = useUpdateCard(boardId, { successMessage: null });
@@ -202,6 +317,11 @@ export function CardModal({ card, boardId, board, onClose }) {
 
   const saveField = (patch) => update.mutate({ cardId: card.id, patch });
 
+  const setCoverFromAttachment = (a) =>
+    update.mutate({ cardId: card.id, patch: { coverUrl: a.fileUrl } });
+  const removeCover = () => saveField({ coverUrl: null });
+  const cover = full.coverUrl;
+
   const onComment = (e) => {
     e.preventDefault();
     const body = comment.trim();
@@ -220,6 +340,13 @@ export function CardModal({ card, boardId, board, onClose }) {
 
   return (
     <Modal open={!!card} onClose={onClose} width={680} title={null} padded>
+      {cover && (
+        <div style={{ position: 'relative', marginBottom: space.lg }}>
+          <img src={cover} alt="Card cover" style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: radius.large, display: 'block' }} />
+          <Button size="sm" variant="secondary" leftIcon={<X size={13} />} onClick={removeCover}
+            style={{ position: 'absolute', top: 8, right: 8 }}>Remove cover</Button>
+        </div>
+      )}
       <input
         value={title}
         onChange={(e) => setTitle(e.target.value)}
@@ -262,6 +389,8 @@ export function CardModal({ card, boardId, board, onClose }) {
 
       {checklists.map((cl) => <Checklist key={cl.id} checklist={cl} cardId={card.id} />)}
 
+      <AttachmentsSection boardId={boardId} card={full} onSetCover={setCoverFromAttachment} />
+
       <div style={{ marginBottom: space.lg }}>
         <div style={sectionLabel}>Comments</div>
         <form onSubmit={onComment} style={{ display: 'flex', gap: space.sm, marginBottom: space.base }}>
@@ -276,6 +405,8 @@ export function CardModal({ card, boardId, board, onClose }) {
           )}
         </div>
       </div>
+
+      <ActivitySection cardId={card.id} />
 
       <div style={{ display: 'flex', gap: space.sm, borderTop: `1px solid ${color.border}`, paddingTop: space.base }}>
         <Button variant="secondary" leftIcon={<Archive size={15} />}
