@@ -8,6 +8,13 @@ function unwrap(data) {
   return Array.isArray(items) ? items : [];
 }
 
+export function useDashboard() {
+  return useQuery({
+    queryKey: ['dashboard'],
+    queryFn: async () => (await api.get('/me/dashboard')).data ?? null,
+  });
+}
+
 /* ------------------------------------------------------------------ Profile */
 
 export function useUpdateProfile() {

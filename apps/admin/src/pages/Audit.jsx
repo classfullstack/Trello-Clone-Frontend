@@ -5,18 +5,18 @@ import { Download, ScrollText } from 'lucide-react';
 import { api } from '../lib/api';
 import { PageHeader } from '../components/Layout';
 import { Table, Pagination } from '../components/Table';
+import { usePagination } from '../lib/usePagination';
 
-const PAGE_SIZE = 25;
 const EMPTY = { actor: '', action: '', from: '', to: '' };
 
-function toParams(f, page) {
+function toParams(f, page, pageSize) {
   return {
     actor: f.actor || undefined,
     action: f.action || undefined,
     from: f.from || undefined,
     to: f.to || undefined,
     page,
-    pageSize: PAGE_SIZE,
+    pageSize,
   };
 }
 
@@ -39,21 +39,22 @@ export function AuditPage() {
   const toast = useToast();
   const [draft, setDraft] = useState(EMPTY);
   const [applied, setApplied] = useState(EMPTY);
-  const [page, setPage] = useState(1);
+  const { page, setPage, pageSize, setPageSize, reset: resetPage } = usePagination('audit', 50);
 
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ['admin', 'audit', applied, page],
+  const { data, isLoading, isFetching, isError, refetch } = useQuery({
+    queryKey: ['admin', 'audit', applied, page, pageSize],
     queryFn: async () => {
-      const res = await api.get('/admin/audit', { params: toParams(applied, page) });
+      const res = await api.get('/admin/audit', { params: toParams(applied, page, pageSize) });
       return Array.isArray(res.data) ? { data: res.data, total: res.data.length } : res.data;
     },
+    placeholderData: (prev) => prev,
   });
 
   const rows = data?.data ?? [];
   const total = data?.total ?? 0;
 
-  const apply = () => { setApplied(draft); setPage(1); };
-  const reset = () => { setDraft(EMPTY); setApplied(EMPTY); setPage(1); };
+  const apply = () => { setApplied(draft); resetPage(); };
+  const reset = () => { setDraft(EMPTY); setApplied(EMPTY); resetPage(); };
 
   const exportCsv = () => {
     if (rows.length === 0) return;
@@ -150,13 +151,15 @@ export function AuditPage() {
         rows={rows}
         rowKey={(r) => r.id}
         loading={isLoading}
+        fetching={isFetching}
+        onRetry={refetch}
         error={isError ? 'Failed to load audit log. The endpoint may not be available yet.' : null}
         empty="No audit entries"
         emptyDescription="No records match the current filters."
         emptyIcon={<ScrollText size={36} />}
       />
 
-      <Pagination page={page} pageSize={PAGE_SIZE} total={total} onPage={setPage} />
+      <Pagination page={page} pageSize={pageSize} total={total} onPage={setPage} onPageSize={setPageSize} />
     </div>
   );
 }

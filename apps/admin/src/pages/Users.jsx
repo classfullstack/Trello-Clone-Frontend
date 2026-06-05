@@ -1,17 +1,22 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  Button, Badge, Modal, Select, Input, Avatar, Dropdown, MenuItem, IconButton, Spinner,
+  Button, Badge, Modal, Select, Avatar, Dropdown, MenuItem, IconButton, Spinner,
   usePermission, useToast, useConfirm, setAccessToken, color, space, font,
 } from '@trello/ui';
 import {
-  MoreHorizontal, ShieldCheck, Ban, CheckCircle2, UserX, Eye, KeyRound, Trash2, LogIn, Copy,
+  MoreHorizontal, ShieldCheck, Ban, CheckCircle2, UserX, Eye, KeyRound, Trash2, LogIn,
 } from 'lucide-react';
 import { api, SYSTEM_ROLES } from '../lib/api';
 import { PageHeader, SearchInput } from '../components/Layout';
 import { Table, Pagination } from '../components/Table';
+import { ViewSwitcher } from '../components/ViewSwitcher';
+import { Alert, CopyField } from '../components/ui';
+import { useViewMode } from '../lib/useViewMode';
+import { usePagination } from '../lib/usePagination';
+import { useDebounced } from '../lib/useDebounced';
+import { UsersMatrix, UsersDetail } from '../components/UsersViews';
 
-const PAGE_SIZE = 20;
 const ELEVATED = new Set(['super_admin', 'admin']);
 
 function fmtDate(d) {
@@ -24,35 +29,51 @@ export function UsersPage() {
   const toast = useToast();
   const confirm = useConfirm();
   const [searchInput, setSearchInput] = useState('');
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
+  const search = useDebounced(searchInput, 300);
+  const { page, setPage, pageSize, setPageSize, reset } = usePagination('users');
+  const [view, setView] = useViewMode('users');
   const [roleTarget, setRoleTarget] = useState(null);
   const [roleKey, setRoleKey] = useState('admin');
   const [tenantId, setTenantId] = useState('');
   const [detailId, setDetailId] = useState(null);
+  const [selectedId, setSelectedId] = useState(null);
   const [pwResult, setPwResult] = useState(null);
 
-  // debounce-ish: commit search on submit / enter
-  const onSearchChange = (e) => {
-    setSearchInput(e.target.value);
-    setPage(1);
-    setSearch(e.target.value);
-  };
+  const onSearchChange = (e) => { setSearchInput(e.target.value); reset(); };
 
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ['admin', 'users', search, page],
+  const { data, isLoading, isFetching, isError, refetch } = useQuery({
+    queryKey: ['admin', 'users', search, page, pageSize],
     queryFn: async () => {
       const res = await api.get('/admin/users', {
-        params: { search: search || undefined, page, pageSize: PAGE_SIZE },
+        params: { search: search || undefined, page, pageSize },
       });
       return Array.isArray(res.data) ? { data: res.data, total: res.data.length } : res.data;
     },
+    placeholderData: (prev) => prev,
   });
+
+  const rows = data?.data ?? [];
+
+  // Workspace list for the role-scope picker.
+  const workspaces = useQuery({
+    queryKey: ['admin', 'workspaces', 'picker'],
+    enabled: !!roleTarget,
+    queryFn: async () => {
+      const res = await api.get('/admin/workspaces', { params: { pageSize: 200 } });
+      return Array.isArray(res.data) ? res.data : (res.data?.data ?? []);
+    },
+  });
+
+  // Auto-select first item for detail view.
+  useEffect(() => {
+    if (view === 'detail' && !selectedId && rows.length) setSelectedId(rows[0].id);
+  }, [view, selectedId, rows]);
 
   const suspend = useMutation({
     mutationFn: ({ id, suspend: s }) => api.post(`/admin/users/${id}/suspend`, { suspend: s }),
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ['admin', 'users'] });
+      qc.invalidateQueries({ queryKey: ['admin', 'user'] });
       qc.invalidateQueries({ queryKey: ['admin', 'stats'] });
       toast.success(vars.suspend ? 'User suspended.' : 'User reinstated.');
     },
@@ -75,6 +96,7 @@ export function UsersPage() {
     mutationFn: (vars) => api.post('/admin/roles/assign', vars),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin', 'users'] });
+      qc.invalidateQueries({ queryKey: ['admin', 'user'] });
       toast.success('Role assigned.');
       setRoleTarget(null);
     },
@@ -90,7 +112,7 @@ export function UsersPage() {
   const resetPw = useMutation({
     mutationFn: (id) => api.post(`/admin/users/${id}/reset-password`, {}),
     onSuccess: (res, id) => {
-      const u = (data?.data ?? []).find((x) => x.id === id);
+      const u = rows.find((x) => x.id === id);
       setPwResult({ email: u?.email ?? id, password: res.data?.password });
     },
     onError: (err) => toast.error(err.response?.data?.message ?? 'Reset failed.'),
@@ -156,9 +178,28 @@ export function UsersPage() {
   const canReset = can('users.reset_password');
   const canDelete = can('users.delete');
   const canImpersonate = can('users.impersonate');
-  const hasActions = true;
 
   const isActive = (u) => u.isActive !== false;
+
+  // Shared action menu — used by table, matrix, and detail views.
+  const renderActions = (u) => (
+    <>
+      <MenuItem icon={<Eye size={16} />} onClick={() => setDetailId(u.id)}>View details</MenuItem>
+      {canAssign && (
+        <MenuItem icon={<ShieldCheck size={16} />} onClick={() => { setRoleTarget(u); setRoleKey('admin'); setTenantId(''); }}>
+          Assign role
+        </MenuItem>
+      )}
+      {canReset && <MenuItem icon={<KeyRound size={16} />} onClick={() => onResetClick(u)}>Reset password</MenuItem>}
+      {canImpersonate && <MenuItem icon={<LogIn size={16} />} onClick={() => onImpersonateClick(u)}>Impersonate</MenuItem>}
+      {canSuspend && (
+        isActive(u)
+          ? <MenuItem icon={<Ban size={16} />} danger onClick={() => onSuspendClick(u, true)}>Suspend user</MenuItem>
+          : <MenuItem icon={<CheckCircle2 size={16} />} onClick={() => onSuspendClick(u, false)}>Reinstate user</MenuItem>
+      )}
+      {canDelete && <MenuItem icon={<Trash2 size={16} />} danger onClick={() => onDeleteClick(u)}>Delete user</MenuItem>}
+    </>
+  );
 
   const columns = [
     {
@@ -189,61 +230,56 @@ export function UsersPage() {
       ),
     },
     { key: 'createdAt', header: 'Joined', render: (u) => <span style={{ color: color.textMuted }}>{fmtDate(u.createdAt)}</span> },
-  ];
-
-  if (hasActions) {
-    columns.push({
+    {
       key: 'actions', header: '', width: 64, align: 'right', render: (u) => (
-        <Dropdown align="right" width={200} trigger={
-          <IconButton label="Actions"><MoreHorizontal size={18} /></IconButton>
-        }>
-          <MenuItem icon={<Eye size={16} />} onClick={() => setDetailId(u.id)}>View details</MenuItem>
-          {canAssign && (
-            <MenuItem icon={<ShieldCheck size={16} />} onClick={() => { setRoleTarget(u); setRoleKey('admin'); setTenantId(''); }}>
-              Assign role
-            </MenuItem>
-          )}
-          {canReset && (
-            <MenuItem icon={<KeyRound size={16} />} onClick={() => onResetClick(u)}>Reset password</MenuItem>
-          )}
-          {canImpersonate && (
-            <MenuItem icon={<LogIn size={16} />} onClick={() => onImpersonateClick(u)}>Impersonate</MenuItem>
-          )}
-          {canSuspend && (
-            isActive(u)
-              ? <MenuItem icon={<Ban size={16} />} danger onClick={() => onSuspendClick(u, true)}>Suspend user</MenuItem>
-              : <MenuItem icon={<CheckCircle2 size={16} />} onClick={() => onSuspendClick(u, false)}>Reinstate user</MenuItem>
-          )}
-          {canDelete && (
-            <MenuItem icon={<Trash2 size={16} />} danger onClick={() => onDeleteClick(u)}>Delete user</MenuItem>
-          )}
+        <Dropdown align="right" width={200} trigger={<IconButton label="Actions"><MoreHorizontal size={18} /></IconButton>}>
+          {renderActions(u)}
         </Dropdown>
       ),
-    });
-  }
+    },
+  ];
 
   const total = data?.total ?? 0;
+  const wsOptions = workspaces.data ?? [];
 
   return (
     <div>
       <PageHeader title="Users" subtitle={total ? `${total.toLocaleString()} total` : 'Manage accounts and roles'} breadcrumb={['Admin', 'Users']} />
 
-      <div style={{ marginBottom: space.base, display: 'flex', gap: space.base, flexWrap: 'wrap' }}>
+      <div style={{ marginBottom: space.base, display: 'flex', gap: space.base, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
         <SearchInput value={searchInput} onChange={onSearchChange} placeholder="Search by email or name…" />
+        <ViewSwitcher value={view} onChange={setView} />
       </div>
 
-      <Table
-        columns={columns}
-        rows={data?.data ?? []}
-        rowKey={(u) => u.id}
-        loading={isLoading}
-        error={isError ? 'Failed to load users. The endpoint may not be available yet.' : null}
-        empty="No users found"
-        emptyDescription={search ? 'Try a different search term.' : 'Users will appear here once they sign up.'}
-        emptyIcon={<UserX size={36} />}
-      />
+      {view === 'list' && (
+        <Table
+          columns={columns}
+          rows={rows}
+          rowKey={(u) => u.id}
+          loading={isLoading}
+          fetching={isFetching}
+          onRetry={refetch}
+          error={isError ? 'Failed to load users. The endpoint may not be available yet.' : null}
+          empty="No users found"
+          emptyDescription={search ? 'Try a different search term.' : 'Users will appear here once they sign up.'}
+          emptyIcon={<UserX size={36} />}
+        />
+      )}
 
-      <Pagination page={page} pageSize={PAGE_SIZE} total={total} onPage={setPage} />
+      {view === 'matrix' && (
+        <UsersMatrix users={rows} loading={isLoading} isError={isError} search={search} renderActions={renderActions} />
+      )}
+
+      {view === 'detail' && (
+        <UsersDetail
+          users={rows} loading={isLoading} isError={isError} search={search}
+          selectedId={selectedId} onSelect={setSelectedId} renderActions={renderActions}
+        />
+      )}
+
+      {view !== 'detail' && (
+        <Pagination page={page} pageSize={pageSize} total={total} onPage={setPage} onPageSize={setPageSize} />
+      )}
 
       {/* Assign role */}
       <Modal
@@ -256,7 +292,7 @@ export function UsersPage() {
             <Button
               loading={assignRole.isPending}
               onClick={() => roleTarget && assignRole.mutate({
-                userId: roleTarget.id, roleKey, tenantId: tenantId.trim() || undefined,
+                userId: roleTarget.id, roleKey, tenantId: tenantId || undefined,
               })}
             >
               Assign role
@@ -264,27 +300,28 @@ export function UsersPage() {
           </>
         }
       >
-        <p style={{ fontFamily: font.text, color: color.textMuted, marginTop: 0 }}>
-          Assign a role to <strong>{roleTarget?.email}</strong>.
-        </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: space.base }}>
+          <p style={{ fontFamily: font.text, color: color.textMuted, margin: 0, fontSize: 14 }}>
+            Assign a role to <strong style={{ color: color.text }}>{roleTarget?.email}</strong>.
+          </p>
           <Select label="Role" value={roleKey} onChange={(e) => setRoleKey(e.target.value)}>
             {SYSTEM_ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
           </Select>
-          <Input
-            label="Tenant ID (optional)"
-            placeholder="Workspace / tenant scope — leave blank for global"
+          <Select
+            label="Scope"
             value={tenantId}
             onChange={(e) => setTenantId(e.target.value)}
-            helper="Scopes the role to a workspace. Omit for a system-wide role."
-          />
+          >
+            <option value="">— Global (system role) —</option>
+            {wsOptions.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
+          </Select>
+          <span style={{ fontFamily: font.text, fontSize: 12, color: color.textMuted, marginTop: -8 }}>
+            {workspaces.isLoading ? 'Loading workspaces…' : 'Choose a workspace to scope the role, or keep it global.'}
+          </span>
           {ELEVATED.has(roleKey) && (
-            <div style={{
-              background: color.errorBg, border: `1px solid ${color.danger}`, color: color.danger,
-              borderRadius: 4, padding: '8px 12px', fontSize: 13,
-            }}>
-              Warning: this grants elevated administrative privileges.
-            </div>
+            <Alert kind="warning" title="Elevated privileges">
+              This grants administrative access across the platform. Assign with care.
+            </Alert>
           )}
         </div>
       </Modal>
@@ -295,19 +332,19 @@ export function UsersPage() {
         onClose={() => setDetailId(null)}
         title="User details"
         size="lg"
-        footer={<Button variant="ghost" onClick={() => setDetailId(null)}>Close</Button>}
+        footer={<Button variant="secondary" onClick={() => setDetailId(null)}>Close</Button>}
       >
         {detail.isLoading && (
           <div style={{ display: 'flex', justifyContent: 'center', padding: space.xl }}><Spinner size={28} /></div>
         )}
         {detail.isError && (
-          <p style={{ color: color.danger, fontFamily: font.text }}>Failed to load user details.</p>
+          <Alert kind="danger" title="Could not load user">The user endpoint may not be available yet.</Alert>
         )}
         {detail.data && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: space.lg, fontFamily: font.text }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: space.base }}>
               <Avatar name={detail.data.name} email={detail.data.email} src={detail.data.avatarUrl} size={48} />
-              <div>
+              <div style={{ minWidth: 0 }}>
                 <div style={{ fontWeight: 700, fontSize: 16, color: color.text }}>{detail.data.name || detail.data.email}</div>
                 <div style={{ color: color.textMuted, fontSize: 13 }}>{detail.data.email}</div>
               </div>
@@ -352,18 +389,14 @@ export function UsersPage() {
         title="New password"
         footer={<Button onClick={() => setPwResult(null)}>Done</Button>}
       >
-        <p style={{ fontFamily: font.text, color: color.textMuted, marginTop: 0 }}>
-          A new password was set for <strong>{pwResult?.email}</strong>. Copy it now — it will not be shown again.
-        </p>
-        <div style={{ display: 'flex', alignItems: 'center', gap: space.sm }}>
-          <code style={{
-            flex: 1, padding: '10px 12px', borderRadius: 6, background: color.surfaceAlt,
-            border: `1px solid ${color.border}`, color: color.text, fontSize: 15, wordBreak: 'break-all',
-          }}>{pwResult?.password}</code>
-          <IconButton label="Copy" onClick={() => {
-            navigator.clipboard?.writeText(pwResult?.password ?? '');
-            toast.success('Copied.');
-          }}><Copy size={18} /></IconButton>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: space.base }}>
+          <p style={{ fontFamily: font.text, color: color.textMuted, margin: 0, fontSize: 14 }}>
+            A new password was set for <strong style={{ color: color.text }}>{pwResult?.email}</strong>.
+          </p>
+          <CopyField value={pwResult?.password ?? ''} />
+          <Alert kind="warning" title="Shown only once">
+            Copy this password now. It cannot be retrieved again after you close this dialog.
+          </Alert>
         </div>
       </Modal>
     </div>

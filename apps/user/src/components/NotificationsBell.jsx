@@ -12,6 +12,16 @@ import { useUserSocket } from '../lib/socket';
 
 function notifText(n) {
   const p = n.payload ?? {};
+  const title = p.title ? `"${p.title}"` : 'a card';
+  switch (n.type) {
+    case 'mention': return `You were mentioned on ${title}`;
+    case 'comment': return `New comment on ${title}`;
+    case 'assigned': return `You were assigned to ${title}`;
+    case 'due_soon': return `${title} is due soon`;
+    case 'invite': return 'You were invited to a workspace';
+    case 'card.updated': return `${title} was updated`;
+    default: break;
+  }
   if (p.message) return p.message;
   if (p.title) return p.title;
   return (n.type || 'notification').replace(/[:_.]/g, ' ');

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Plus, Trash2, Pencil, X, Archive, Paperclip, Download, Image as ImageIcon,
   FileText, Activity as ActivityIcon, Copy, Eye, EyeOff,
@@ -13,7 +13,9 @@ import {
   useDeleteChecklistItem, useAddCardLabel, useRemoveCardLabel,
   useAttachments, useUploadAttachment, useDeleteAttachment, useDownloadAttachment,
   useCardActivity, useDuplicateCard, useWatchCard,
+  useBoardMembers, useAddCardMember, useRemoveCardMember, useSetCardFieldValue,
 } from '../lib/boardData';
+import { MentionInput } from './MentionInput';
 
 const sectionLabel = { fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', color: color.textMuted, marginBottom: 8 };
 
@@ -174,6 +176,81 @@ function LabelsEditor({ boardId, card, boardLabels }) {
   );
 }
 
+function MembersEditor({ boardId, card }) {
+  const membersQ = useBoardMembers(boardId);
+  const add = useAddCardMember(boardId, card.id);
+  const remove = useRemoveCardMember(boardId, card.id);
+  const assigned = card.members ?? [];
+  const assignedIds = new Set(assigned.map((m) => m.id));
+  const candidates = (membersQ.data ?? []).filter((u) => !assignedIds.has(u.id));
+
+  return (
+    <div>
+      <div style={sectionLabel}>Members</div>
+      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 6 }}>
+        {assigned.map((m) => (
+          <span key={m.id} style={{ position: 'relative', display: 'inline-flex' }}>
+            <Avatar name={m.name} email={m.email} src={m.avatarUrl} size={32} />
+            <IconButton label="Remove member" size={18} onClick={() => remove.mutate(m.id)}
+              style={{ position: 'absolute', top: -4, right: -4, background: color.surface }}>
+              <X size={11} />
+            </IconButton>
+          </span>
+        ))}
+        {assigned.length === 0 && <span style={{ fontSize: 13, color: color.textMuted }}>No members.</span>}
+      </div>
+      {candidates.length > 0 && (
+        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+          {candidates.map((u) => (
+            <button key={u.id} onClick={() => add.mutate(u.id)} aria-label={`Assign ${u.name || u.email}`}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 4, border: `1px solid ${color.border}`, background: color.surface, borderRadius: radius.pill, padding: '2px 8px 2px 2px', cursor: 'pointer' }}>
+              <Avatar name={u.name} email={u.email} src={u.avatarUrl} size={22} />
+              <span style={{ fontSize: 12, color: color.text }}>{u.name || u.email}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FieldRow({ boardId, card, field }) {
+  const set = useSetCardFieldValue(boardId, card.id);
+  const current = (card.fieldValues ?? []).find((v) => v.fieldId === field.id)?.value ?? '';
+  const [val, setVal] = useState(current);
+  useEffect(() => { setVal(current); }, [current]);
+  const save = (v) => set.mutate({ fieldId: field.id, value: v === '' ? null : v });
+
+  const common = { width: '100%' };
+  return (
+    <div style={{ marginBottom: space.sm }}>
+      <div style={{ fontSize: 12, fontWeight: 600, color: color.textMuted, marginBottom: 2 }}>{field.name}</div>
+      {field.type === 'checkbox' ? (
+        <input type="checkbox" checked={!!val} onChange={(e) => { setVal(e.target.checked); save(e.target.checked); }} />
+      ) : field.type === 'dropdown' ? (
+        <select value={val} onChange={(e) => { setVal(e.target.value); save(e.target.value); }}
+          style={{ ...common, padding: '6px 8px', borderRadius: radius.base, border: `1px solid ${color.border}`, fontFamily: font.text, fontSize: 13 }}>
+          <option value="">—</option>
+          {(field.options ?? []).map((o) => <option key={o} value={o}>{o}</option>)}
+        </select>
+      ) : (
+        <Input type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
+          value={val} onChange={(e) => setVal(e.target.value)} onBlur={() => save(val)} wrapStyle={common} />
+      )}
+    </div>
+  );
+}
+
+function CustomFieldsEditor({ boardId, card, fields }) {
+  if (!fields?.length) return null;
+  return (
+    <div style={{ marginBottom: space.lg }}>
+      <div style={sectionLabel}>Custom fields</div>
+      {fields.map((f) => <FieldRow key={f.id} boardId={boardId} card={card} field={f} />)}
+    </div>
+  );
+}
+
 function formatSize(bytes) {
   if (!bytes) return '';
   const u = ['B', 'KB', 'MB', 'GB'];
@@ -298,9 +375,17 @@ export function CardModal({ card, boardId, board, onClose }) {
   const [description, setDescription] = useState('');
   const [due, setDue] = useState('');
   const [comment, setComment] = useState('');
+  const [mentions, setMentions] = useState([]);
 
   const full = detailQ.data ?? card;
   const boardLabels = board?.labels ?? [];
+  const mentionCandidates = useMemo(() => {
+    const m = new Map();
+    (full.members ?? []).forEach((u) => m.set(u.id, u));
+    (board?.lists ?? []).forEach((l) => (l.cards ?? []).forEach((c) =>
+      (c.members ?? []).forEach((u) => m.set(u.id, u))));
+    return [...m.values()];
+  }, [full.members, board]);
 
   useEffect(() => {
     setTitle(card?.title ?? '');
@@ -328,7 +413,7 @@ export function CardModal({ card, boardId, board, onClose }) {
     e.preventDefault();
     const body = comment.trim();
     if (!body) return;
-    addComment.mutate(body, { onSuccess: () => setComment('') });
+    addComment.mutate({ body, mentions }, { onSuccess: () => { setComment(''); setMentions([]); } });
   };
 
   const onDeleteCard = async () => {
@@ -336,7 +421,6 @@ export function CardModal({ card, boardId, board, onClose }) {
     if (ok) del.mutate(card.id, { onSuccess: onClose });
   };
 
-  const members = full.members ?? [];
   const comments = commentsQ.data ?? [];
   const checklists = full.checklists ?? [];
 
@@ -364,14 +448,11 @@ export function CardModal({ card, boardId, board, onClose }) {
         <LabelsEditor boardId={boardId} card={full} boardLabels={boardLabels} />
       </div>
 
-      {members.length > 0 && (
-        <div style={{ marginBottom: space.lg }}>
-          <div style={sectionLabel}>Members</div>
-          <div style={{ display: 'flex', gap: 4 }}>
-            {members.map((m) => <Avatar key={m.id} name={m.name} email={m.email} src={m.avatarUrl} size={32} />)}
-          </div>
-        </div>
-      )}
+      <div style={{ marginBottom: space.lg }}>
+        <MembersEditor boardId={boardId} card={full} />
+      </div>
+
+      <CustomFieldsEditor boardId={boardId} card={full} fields={board?.customFields ?? []} />
 
       <div style={{ marginBottom: space.lg }}>
         <div style={sectionLabel}>Description</div>
@@ -396,7 +477,8 @@ export function CardModal({ card, boardId, board, onClose }) {
       <div style={{ marginBottom: space.lg }}>
         <div style={sectionLabel}>Comments</div>
         <form onSubmit={onComment} style={{ display: 'flex', gap: space.sm, marginBottom: space.base }}>
-          <Input placeholder="Write a comment…" value={comment} onChange={(e) => setComment(e.target.value)} wrapStyle={{ flex: 1 }} />
+          <MentionInput placeholder="Write a comment… use @ to mention" value={comment}
+            onChange={setComment} candidates={mentionCandidates} onMentionsChange={setMentions} />
           <Button type="submit" loading={addComment.isPending} disabled={!comment.trim()} style={{ whiteSpace: 'nowrap' }}>Send</Button>
         </form>
         <div style={{ display: 'flex', flexDirection: 'column', gap: space.md }}>

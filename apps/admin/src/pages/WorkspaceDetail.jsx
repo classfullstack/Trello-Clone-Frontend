@@ -6,11 +6,12 @@ import {
   usePermission, useToast, useConfirm, color, space, font, radius,
 } from '@trello/ui';
 import {
-  ArrowLeft, Pencil, UserCog, Lock, Unlock, Trash2, KanbanSquare, Users, LayoutDashboard, Layers, AlertTriangle,
+  ArrowLeft, Pencil, UserCog, Lock, Unlock, Trash2, KanbanSquare, Users, LayoutDashboard, Layers, AlertTriangle, Check,
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { PageHeader } from '../components/Layout';
 import { Table } from '../components/Table';
+import { Alert } from '../components/ui';
 
 function fmtDate(d) {
   return d ? new Date(d).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '—';
@@ -47,6 +48,7 @@ export function WorkspaceDetailPage() {
   const [editVisibility, setEditVisibility] = useState('private');
   const [transferOpen, setTransferOpen] = useState(false);
   const [newOwnerId, setNewOwnerId] = useState('');
+  const [transferEmail, setTransferEmail] = useState('');
 
   const detail = useQuery({
     queryKey: ['admin', 'workspace', id],
@@ -156,7 +158,7 @@ export function WorkspaceDetailPage() {
         action={
           <div style={{ display: 'flex', gap: space.sm, flexWrap: 'wrap' }}>
             {canUpdate && <Button variant="secondary" leftIcon={<Pencil size={16} />} onClick={openEdit}>Edit</Button>}
-            {canUpdate && <Button variant="secondary" leftIcon={<UserCog size={16} />} onClick={() => { setNewOwnerId(''); setTransferOpen(true); }}>Transfer</Button>}
+            {canUpdate && <Button variant="secondary" leftIcon={<UserCog size={16} />} onClick={() => { setNewOwnerId(''); setTransferEmail(''); setTransferOpen(true); }}>Transfer</Button>}
             {canLock && (
               <Button variant="secondary" leftIcon={ws.isLocked ? <Unlock size={16} /> : <Lock size={16} />} onClick={onLock}>
                 {ws.isLocked ? 'Unlock' : 'Lock'}
@@ -193,7 +195,7 @@ export function WorkspaceDetailPage() {
       <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Edit workspace"
         footer={<>
           <Button variant="ghost" onClick={() => setEditOpen(false)}>Cancel</Button>
-          <Button loading={update.isPending} onClick={() => update.mutate({ name: editName.trim(), visibility: editVisibility })}>Save changes</Button>
+          <Button loading={update.isPending} disabled={!editName.trim()} onClick={() => update.mutate({ name: editName.trim(), visibility: editVisibility })}>Save changes</Button>
         </>}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: space.base }}>
           <Input label="Name" value={editName} onChange={(e) => setEditName(e.target.value)} />
@@ -205,16 +207,56 @@ export function WorkspaceDetailPage() {
         </div>
       </Modal>
 
-      <Modal open={transferOpen} onClose={() => setTransferOpen(false)} title="Transfer owner"
-        footer={<>
-          <Button variant="ghost" onClick={() => setTransferOpen(false)}>Cancel</Button>
-          <Button loading={transfer.isPending} disabled={!newOwnerId.trim()} onClick={() => transfer.mutate({ newOwnerId: newOwnerId.trim() })}>Transfer</Button>
-        </>}>
-        <p style={{ fontFamily: font.text, color: color.textMuted, marginTop: 0 }}>
-          Transfer ownership of <strong>{ws.name}</strong> to another user.
-        </p>
-        <Input label="New owner user ID" placeholder="UUID of the new owner" value={newOwnerId} onChange={(e) => setNewOwnerId(e.target.value)} helper="The new owner is granted the workspace owner role." />
-      </Modal>
+      {(() => {
+        const memberList = ws.members ?? [];
+        const hasMembers = memberList.length > 0;
+        const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(transferEmail.trim());
+        const canSubmit = hasMembers ? !!newOwnerId : emailValid;
+        const submit = () => transfer.mutate({ newOwnerId: hasMembers ? newOwnerId : transferEmail.trim() });
+        return (
+          <Modal open={transferOpen} onClose={() => setTransferOpen(false)} title="Transfer owner"
+            footer={<>
+              <Button variant="ghost" onClick={() => setTransferOpen(false)}>Cancel</Button>
+              <Button loading={transfer.isPending} disabled={!canSubmit} onClick={submit}>Transfer</Button>
+            </>}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: space.base }}>
+              <p style={{ fontFamily: font.text, color: color.textMuted, margin: 0, fontSize: 14 }}>
+                Transfer ownership of <strong style={{ color: color.text }}>{ws.name}</strong> to another member.
+              </p>
+              {hasMembers ? (
+                <div style={{ border: `1px solid ${color.border}`, borderRadius: radius.large, maxHeight: 280, overflowY: 'auto' }}>
+                  {memberList.map((m) => {
+                    const active = m.userId === newOwnerId;
+                    return (
+                      <button key={m.userId} type="button" onClick={() => setNewOwnerId(m.userId)} style={{
+                        display: 'flex', alignItems: 'center', gap: space.sm, width: '100%', textAlign: 'left',
+                        padding: '10px 12px', border: 'none', borderBottom: `1px solid ${color.border}`,
+                        cursor: 'pointer', background: active ? color.primaryBadgeBg : 'transparent',
+                      }}>
+                        <Avatar name={m.name} email={m.email} size={30} />
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{ fontWeight: 600, color: color.text, fontSize: 13 }}>{m.name || m.email}</div>
+                          <div style={{ color: color.textMuted, fontSize: 12 }}>{m.email}</div>
+                        </div>
+                        <Badge>{m.role}</Badge>
+                        {active && <Check size={16} style={{ color: color.blue, flexShrink: 0 }} />}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <>
+                  <Alert kind="info">No member list is available. Enter the email of the new owner; they must be an existing user.</Alert>
+                  <Input label="New owner email" type="email" placeholder="name@example.com" value={transferEmail}
+                    onChange={(e) => setTransferEmail(e.target.value)}
+                    error={transferEmail && !emailValid ? 'Enter a valid email address.' : undefined}
+                    helper={!transferEmail ? 'The new owner is granted the workspace owner role.' : undefined} />
+                </>
+              )}
+            </div>
+          </Modal>
+        );
+      })()}
     </div>
   );
 }

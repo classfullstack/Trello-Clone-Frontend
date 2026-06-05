@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Home, User, Settings as SettingsIcon, LogOut, Layout, CreditCard } from 'lucide-react';
+import { Search, Home, User, Settings as SettingsIcon, LogOut, Layout, CreditCard, LayoutDashboard } from 'lucide-react';
 import {
   useAuth, useToast, ThemeToggle, Avatar, Dropdown, MenuItem, MenuDivider, Spinner,
   color, font, radius, space, shadow,
@@ -149,6 +149,7 @@ export function NavBar() {
             </div>
             <MenuDivider />
             <MenuItem icon={<Home size={16} />} onClick={() => navigate('/')}>Workspaces</MenuItem>
+            <MenuItem icon={<LayoutDashboard size={16} />} onClick={() => navigate('/dashboard')}>Dashboard</MenuItem>
             <MenuItem icon={<User size={16} />} onClick={() => navigate('/profile')}>Profile</MenuItem>
             <MenuItem icon={<SettingsIcon size={16} />} onClick={() => navigate('/settings')}>Settings</MenuItem>
             <MenuDivider />

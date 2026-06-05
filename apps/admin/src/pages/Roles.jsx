@@ -8,6 +8,7 @@ import { ShieldCheck, Lock, AlertTriangle, ChevronRight } from 'lucide-react';
 import { api } from '../lib/api';
 import { PageHeader } from '../components/Layout';
 import { Table } from '../components/Table';
+import { Alert } from '../components/ui';
 
 export function RolesPage() {
   const { hasRole } = usePermission();
@@ -167,12 +168,12 @@ function RoleDetailModal({ roleId, canEdit, onClose }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: space.sm, marginBottom: space.base, flexWrap: 'wrap' }}>
             <code style={{ fontFamily: font.mono, fontSize: 12, color: color.textMuted }}>{role.key}</code>
             {isSystem && <Badge kind="primary"><Lock size={11} /> System role</Badge>}
-            {!editable && (
-              <span style={{ color: color.textMuted, fontSize: 12 }}>
-                {isSystem ? 'System roles are read-only.' : 'You do not have permission to edit roles.'}
-              </span>
-            )}
           </div>
+          {!editable && (
+            <Alert kind="info" style={{ marginBottom: space.base }}>
+              {isSystem ? 'System roles are read-only and cannot be modified.' : 'You do not have permission to edit roles.'}
+            </Alert>
+          )}
 
           {groups.length === 0 ? (
             <EmptyState icon={<ShieldCheck size={36} />} title="No permissions" description="No permissions are defined." />

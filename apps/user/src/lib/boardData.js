@@ -270,7 +270,7 @@ export function useAddComment(cardId) {
   const qc = useQueryClient();
   const toast = useToast();
   return useMutation({
-    mutationFn: (body) => api.post(`/cards/${cardId}/comments`, { body }),
+    mutationFn: ({ body, mentions }) => api.post(`/cards/${cardId}/comments`, { body, mentions }),
     onSuccess: () => { toast.success('Comment added.'); qc.invalidateQueries({ queryKey: ['comments', cardId] }); },
     onError: () => toast.error('Could not add comment.'),
   });
@@ -439,6 +439,124 @@ export function useRemoveCardLabel(boardId, cardId) {
   });
 }
 
+/* ------------------------------------------------------------ Board members */
+
+export function useBoardMembers(boardId) {
+  return useQuery({
+    queryKey: ['board-members', boardId],
+    queryFn: async () => unwrap((await api.get(`/boards/${boardId}/members`)).data),
+    enabled: !!boardId,
+  });
+}
+
+export function useWorkspaceMembers(workspaceId) {
+  return useQuery({
+    queryKey: ['ws-members', workspaceId],
+    queryFn: async () => unwrap((await api.get(`/workspaces/${workspaceId}/members`)).data),
+    enabled: !!workspaceId,
+  });
+}
+
+export function useAddBoardMember(boardId) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  return useMutation({
+    mutationFn: ({ userId, role }) => api.post(`/boards/${boardId}/members`, { userId, role }),
+    onSuccess: () => { toast.success('Member added.'); qc.invalidateQueries({ queryKey: ['board-members', boardId] }); },
+    onError: () => toast.error('Could not add member.'),
+  });
+}
+
+export function useUpdateBoardMember(boardId) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  return useMutation({
+    mutationFn: ({ userId, role }) => api.patch(`/boards/${boardId}/members/${userId}`, { role }),
+    onSuccess: () => { toast.success('Role updated.'); qc.invalidateQueries({ queryKey: ['board-members', boardId] }); },
+    onError: () => toast.error('Could not update role.'),
+  });
+}
+
+export function useRemoveBoardMember(boardId) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  return useMutation({
+    mutationFn: (userId) => api.delete(`/boards/${boardId}/members/${userId}`),
+    onSuccess: () => { toast.success('Member removed.'); qc.invalidateQueries({ queryKey: ['board-members', boardId] }); },
+    onError: () => toast.error('Could not remove member.'),
+  });
+}
+
+/* ------------------------------------------------------------- Card members */
+
+export function useAddCardMember(boardId, cardId) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  return useMutation({
+    mutationFn: (userId) => api.post(`/cards/${cardId}/members`, { userId }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['card', cardId] });
+      invalidateBoard(qc, boardId);
+    },
+    onError: () => toast.error('Could not add member.'),
+  });
+}
+
+export function useRemoveCardMember(boardId, cardId) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  return useMutation({
+    mutationFn: (userId) => api.delete(`/cards/${cardId}/members/${userId}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['card', cardId] });
+      invalidateBoard(qc, boardId);
+    },
+    onError: () => toast.error('Could not remove member.'),
+  });
+}
+
+/* ------------------------------------------------------------- Custom fields */
+
+export function useCreateField(boardId) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  return useMutation({
+    mutationFn: (input) => api.post(`/boards/${boardId}/custom-fields`, input),
+    onSuccess: () => { toast.success('Field created.'); invalidateBoard(qc, boardId); },
+    onError: () => toast.error('Could not create field.'),
+  });
+}
+
+export function useUpdateField(boardId) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  return useMutation({
+    mutationFn: ({ fieldId, patch }) => api.patch(`/custom-fields/${fieldId}`, patch),
+    onSuccess: () => { toast.success('Field updated.'); invalidateBoard(qc, boardId); },
+    onError: () => toast.error('Could not update field.'),
+  });
+}
+
+export function useDeleteField(boardId) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  return useMutation({
+    mutationFn: (fieldId) => api.delete(`/custom-fields/${fieldId}`),
+    onSuccess: () => { toast.success('Field deleted.'); invalidateBoard(qc, boardId); },
+    onError: () => toast.error('Could not delete field.'),
+  });
+}
+
+export function useSetCardFieldValue(boardId, cardId) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  return useMutation({
+    mutationFn: ({ fieldId, value }) => api.put(`/cards/${cardId}/fields/${fieldId}`, { value }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['card', cardId] }); },
+    onError: () => toast.error('Could not save field value.'),
+  });
+}
+
 export function useCreateBoardLabel(boardId) {
   const qc = useQueryClient();
   const toast = useToast();
@@ -446,6 +564,16 @@ export function useCreateBoardLabel(boardId) {
     mutationFn: ({ name, color }) => api.post(`/boards/${boardId}/labels`, { name, color }),
     onSuccess: () => { toast.success('Label created.'); invalidateBoard(qc, boardId); },
     onError: () => toast.error('Could not create label.'),
+  });
+}
+
+export function useUpdateBoardLabel(boardId) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  return useMutation({
+    mutationFn: ({ labelId, patch }) => api.patch(`/labels/${labelId}`, patch),
+    onSuccess: () => { toast.success('Label updated.'); invalidateBoard(qc, boardId); },
+    onError: () => toast.error('Could not update label.'),
   });
 }
 

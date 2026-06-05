@@ -5,9 +5,13 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from './lib/api';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
+import { ForgotPassword } from './pages/ForgotPassword';
+import { ResetPassword } from './pages/ResetPassword';
 import { Workspaces } from './pages/Workspaces';
 import { WorkspaceBoards } from './pages/WorkspaceBoards';
 import { BoardView } from './pages/BoardView';
+import { CalendarView } from './pages/CalendarView';
+import { Dashboard } from './pages/Dashboard';
 import { Profile } from './pages/Profile';
 import { Settings } from './pages/Settings';
 import { NavBar } from './components/NavBar';
@@ -60,9 +64,13 @@ export function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/" element={<ProtectedRoute><Shell><Workspaces /></Shell></ProtectedRoute>} />
           <Route path="/w/:workspaceId" element={<ProtectedRoute><Shell><WorkspaceBoards /></Shell></ProtectedRoute>} />
           <Route path="/b/:boardId" element={<ProtectedRoute><Shell><BoardView /></Shell></ProtectedRoute>} />
+          <Route path="/b/:boardId/calendar" element={<ProtectedRoute><Shell><CalendarView /></Shell></ProtectedRoute>} />
+          <Route path="/dashboard" element={<ProtectedRoute><Shell><Dashboard /></Shell></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Shell><Profile /></Shell></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Shell><Settings /></Shell></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />

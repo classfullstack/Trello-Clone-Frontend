@@ -56,6 +56,9 @@ export function Login() {
           onChange={(e) => setPassword(e.target.value)}
         />
         <Button type="submit" size="lg" loading={busy} fullWidth>Log in</Button>
+        <Link to="/forgot-password" style={{ color: '#fff', fontSize: 13, textAlign: 'center', opacity: 0.9 }}>
+          Forgot password?
+        </Link>
       </form>
     </AuthShell>
   );

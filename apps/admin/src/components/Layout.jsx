@@ -184,7 +184,13 @@ export function Layout({ children }) {
           .admin-content { margin-left: 0 !important; }
           .admin-menu-btn { display: inline-flex !important; }
         }
-        @media (max-width: 600px) { .admin-email { display: none !important; } }
+        @media (max-width: 900px) {
+          .admin-master-detail { grid-template-columns: 1fr !important; }
+        }
+        @media (max-width: 600px) {
+          .admin-email { display: none !important; }
+          .admin-vs-label { display: none !important; }
+        }
       `}</style>
     </div>
   );

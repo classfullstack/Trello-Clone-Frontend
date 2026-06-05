@@ -8,7 +8,7 @@ import {
 } from '@dnd-kit/sortable';
 import {
   Plus, MoreHorizontal, Pencil, Image, Archive, ArchiveRestore, Trash2, AlertTriangle,
-  Filter as FilterIcon, X, FileText,
+  Filter as FilterIcon, X, FileText, Tag as TagIcon, Users, SlidersHorizontal, CalendarDays,
 } from 'lucide-react';
 import {
   Button, Input, Textarea, Modal, Spinner, EmptyState, IconButton, Dropdown, MenuItem, LabelChip, Avatar, useConfirm,
@@ -24,6 +24,9 @@ import { midpoint } from '../lib/position';
 import { ListColumn } from '../components/ListColumn';
 import { CardTile } from '../components/CardTile';
 import { CardModal } from '../components/CardModal';
+import { LabelsManager } from '../components/LabelsManager';
+import { BoardMembers } from '../components/BoardMembers';
+import { CustomFieldsManager } from '../components/CustomFieldsManager';
 
 const EMPTY_FILTER = { text: '', labelIds: [], memberIds: [], due: '' };
 
@@ -103,6 +106,9 @@ export function BoardView() {
   const [bgOpen, setBgOpen] = useState(false);
   const [descOpen, setDescOpen] = useState(false);
   const [boardDesc, setBoardDesc] = useState('');
+  const [labelsOpen, setLabelsOpen] = useState(false);
+  const [membersOpen, setMembersOpen] = useState(false);
+  const [fieldsOpen, setFieldsOpen] = useState(false);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
@@ -247,6 +253,14 @@ export function BoardView() {
         </h1>
         <span style={{ flex: 1 }} />
         {board && (
+          <Link to={`/b/${boardId}/calendar`} style={{ color: '#fff', textDecoration: 'none' }}>
+            <Button variant="secondary" size="sm" leftIcon={<CalendarDays size={15} />}
+              style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', border: 'none' }}>
+              Calendar
+            </Button>
+          </Link>
+        )}
+        {board && (
           <FilterBar
             filter={filter}
             setFilter={setFilter}
@@ -264,6 +278,9 @@ export function BoardView() {
             <MenuItem icon={<Pencil size={16} />} onClick={() => { setBoardName(board.name); setRenameOpen(true); }}>Rename</MenuItem>
             <MenuItem icon={<FileText size={16} />} onClick={() => { setBoardDesc(board.description ?? ''); setDescOpen(true); }}>Edit description</MenuItem>
             <MenuItem icon={<Image size={16} />} onClick={() => setBgOpen(true)}>Change background</MenuItem>
+            <MenuItem icon={<TagIcon size={16} />} onClick={() => setLabelsOpen(true)}>Manage labels</MenuItem>
+            <MenuItem icon={<Users size={16} />} onClick={() => setMembersOpen(true)}>Members</MenuItem>
+            <MenuItem icon={<SlidersHorizontal size={16} />} onClick={() => setFieldsOpen(true)}>Custom fields</MenuItem>
             <MenuItem icon={board.archived ? <ArchiveRestore size={16} /> : <Archive size={16} />} onClick={onArchiveBoard}>
               {board.archived ? 'Unarchive' : 'Archive'}
             </MenuItem>
@@ -380,6 +397,10 @@ export function BoardView() {
           ))}
         </div>
       </Modal>
+
+      <LabelsManager open={labelsOpen} onClose={() => setLabelsOpen(false)} boardId={boardId} labels={board?.labels ?? []} />
+      <BoardMembers open={membersOpen} onClose={() => setMembersOpen(false)} boardId={boardId} workspaceId={board?.workspaceId} />
+      <CustomFieldsManager open={fieldsOpen} onClose={() => setFieldsOpen(false)} boardId={boardId} fields={board?.customFields ?? []} />
 
       <CardModal card={openCard} boardId={boardId} board={board} onClose={() => setOpenCard(null)} />
     </div>
