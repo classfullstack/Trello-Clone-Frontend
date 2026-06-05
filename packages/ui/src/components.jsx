@@ -400,34 +400,62 @@ export function Modal({ open, onClose, title, size = 'md', width, footer, header
 
 export function Dropdown({ trigger, children, align = 'left', width = 220 }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef(null);
+  const [coords, setCoords] = useState(null);
+  const triggerRef = useRef(null);
+  const menuRef = useRef(null);
+
+  const place = () => {
+    const el = triggerRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const vw = window.innerWidth;
+    let left = align === 'right' ? r.right - width : r.left;
+    left = Math.max(8, Math.min(left, vw - width - 8)); // keep within viewport
+    setCoords({ top: r.bottom + 6, left });
+  };
+
+  const toggle = () => { if (!open) place(); setOpen((v) => !v); };
 
   useEffect(() => {
     if (!open) return undefined;
-    const onDoc = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const onDoc = (e) => {
+      if (triggerRef.current?.contains(e.target) || menuRef.current?.contains(e.target)) return;
+      setOpen(false);
+    };
     const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+    const onScroll = () => setOpen(false);
     document.addEventListener('mousedown', onDoc);
     document.addEventListener('keydown', onKey);
-    return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey); };
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', onScroll);
+    return () => {
+      document.removeEventListener('mousedown', onDoc);
+      document.removeEventListener('keydown', onKey);
+      window.removeEventListener('scroll', onScroll, true);
+      window.removeEventListener('resize', onScroll);
+    };
   }, [open]);
 
   return (
-    <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
-      <span onClick={() => setOpen((v) => !v)}>{trigger}</span>
-      {open && (
+    <span ref={triggerRef} style={{ display: 'inline-flex' }}>
+      <span onClick={toggle}>{trigger}</span>
+      {open && coords && createPortal(
         <div
+          ref={menuRef}
           role="menu"
           style={{
-            position: 'absolute', top: 'calc(100% + 6px)', [align]: 0, width, zIndex: 200,
+            position: 'fixed', top: coords.top, left: coords.left, width, zIndex: 3000,
             background: color.surface, border: `1px solid ${color.border}`, borderRadius: radius.large,
             boxShadow: shadow.dropdown, padding: space.xs, animation: 'trello-pop .12s ease',
+            maxHeight: '70vh', overflowY: 'auto',
           }}
           onClick={() => setOpen(false)}
         >
           {children}
-        </div>
+        </div>,
+        document.body,
       )}
-    </div>
+    </span>
   );
 }
 
