@@ -377,15 +377,15 @@ export function CardModal({ card, boardId, board, onClose }) {
   const [comment, setComment] = useState('');
   const [mentions, setMentions] = useState([]);
 
-  const full = detailQ.data ?? card;
+  const full = detailQ.data ?? card ?? {};
   const boardLabels = board?.labels ?? [];
   const mentionCandidates = useMemo(() => {
     const m = new Map();
-    (full.members ?? []).forEach((u) => m.set(u.id, u));
+    (full?.members ?? []).forEach((u) => m.set(u.id, u));
     (board?.lists ?? []).forEach((l) => (l.cards ?? []).forEach((c) =>
       (c.members ?? []).forEach((u) => m.set(u.id, u))));
     return [...m.values()];
-  }, [full.members, board]);
+  }, [full?.members, board]);
 
   useEffect(() => {
     setTitle(card?.title ?? '');
