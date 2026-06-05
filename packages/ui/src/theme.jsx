@@ -198,9 +198,20 @@ export function GlobalStyles() {
       @keyframes trello-spin { to { transform: rotate(360deg); } }
       @keyframes trello-shimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
       @keyframes trello-fade { from { opacity: 0; } to { opacity: 1; } }
-      @keyframes trello-pop { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
+      @keyframes trello-fade-out { from { opacity: 1; } to { opacity: 0; } }
+      @keyframes trello-pop { from { opacity: 0; transform: scale(0.96) translateY(6px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+      @keyframes trello-pop-out { from { opacity: 1; transform: scale(1) translateY(0); } to { opacity: 0; transform: scale(0.97) translateY(4px); } }
+      @keyframes trello-menu-in { from { opacity: 0; transform: scale(0.97) translateY(-6px); } to { opacity: 1; transform: scale(1) translateY(0); } }
       @keyframes trello-slide-in { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: translateX(0); } }
       @keyframes trello-slide-out { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(16px); } }
+      @keyframes trello-panel-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          animation-duration: 0.001ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.001ms !important;
+        }
+      }
     `}</style>
   );
 }

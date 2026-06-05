@@ -335,34 +335,52 @@ const modalSizes = { sm: 420, md: 560, lg: 720, xl: 880 };
 
 export function Modal({ open, onClose, title, size = 'md', width, footer, headerExtra, children, padded = true }) {
   const ref = useRef(null);
+  const [mounted, setMounted] = useState(open);
+  const [closing, setClosing] = useState(false);
+
+  const beginClose = useCallback(() => {
+    setClosing(true);
+    setTimeout(() => { onClose?.(); }, 140);
+  }, [onClose]);
 
   useEffect(() => {
-    if (!open) return undefined;
-    const onKey = (e) => { if (e.key === 'Escape') onClose?.(); };
+    if (open) { setMounted(true); setClosing(false); }
+    else if (mounted) {
+      setClosing(true);
+      const t = setTimeout(() => { setMounted(false); setClosing(false); }, 140);
+      return () => clearTimeout(t);
+    }
+    return undefined;
+  }, [open, mounted]);
+
+  useEffect(() => {
+    if (!mounted) return undefined;
+    const onKey = (e) => { if (e.key === 'Escape') beginClose(); };
     document.addEventListener('keydown', onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = prev; };
-  }, [open, onClose]);
+  }, [mounted, beginClose]);
 
   useEffect(() => {
-    if (open && ref.current) {
+    if (open && !closing && ref.current) {
       const focusable = ref.current.querySelector('input, textarea, button, [tabindex]');
       focusable?.focus?.();
     }
-  }, [open]);
+  }, [open, closing]);
 
-  if (!open) return null;
+  if (!mounted) return null;
   const maxWidth = width ?? modalSizes[size] ?? modalSizes.md;
 
   return createPortal(
     <div
-      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose?.(); }}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) beginClose(); }}
       style={{
         position: 'fixed', inset: 0, background: 'rgba(9,30,66,0.54)',
+        backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)',
         display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
         zIndex: 1000, padding: space.lg, overflowY: 'auto',
-        animation: 'trello-fade .12s ease',
+        animation: `${closing ? 'trello-fade-out' : 'trello-fade'} .14s ease both`,
       }}
     >
       <div
@@ -373,11 +391,12 @@ export function Modal({ open, onClose, title, size = 'md', width, footer, header
         style={{
           background: color.surface, borderRadius: radius.large, boxShadow: shadow.modal,
           maxWidth, width: '100%', marginTop: '6vh', marginBottom: '6vh', position: 'relative',
-          animation: 'trello-pop .14s ease', display: 'flex', flexDirection: 'column',
+          animation: `${closing ? 'trello-pop-out' : 'trello-pop'} .16s cubic-bezier(0.16,1,0.3,1) both`,
+          display: 'flex', flexDirection: 'column',
         }}
       >
         {!(title || headerExtra) && (
-          <IconButton label="Close" onClick={onClose}
+          <IconButton label="Close" onClick={beginClose}
             style={{ position: 'absolute', top: 12, right: 12, zIndex: 1 }}>
             <X size={18} />
           </IconButton>
@@ -392,7 +411,7 @@ export function Modal({ open, onClose, title, size = 'md', width, footer, header
             </h2>
             <div style={{ display: 'flex', alignItems: 'center', gap: space.sm }}>
               {headerExtra}
-              <IconButton label="Close" onClick={onClose}><X size={18} /></IconButton>
+              <IconButton label="Close" onClick={beginClose}><X size={18} /></IconButton>
             </div>
           </div>
         )}
@@ -459,7 +478,8 @@ export function Dropdown({ trigger, children, align = 'left', width = 220 }) {
           style={{
             position: 'fixed', top: coords.top, left: coords.left, width, zIndex: 3000,
             background: color.surface, border: `1px solid ${color.border}`, borderRadius: radius.large,
-            boxShadow: shadow.dropdown, padding: space.xs, animation: 'trello-pop .12s ease',
+            boxShadow: shadow.dropdown, padding: space.xs, transformOrigin: 'top',
+            animation: 'trello-menu-in .14s cubic-bezier(0.16,1,0.3,1) both',
             maxHeight: '70vh', overflowY: 'auto',
           }}
           onClick={() => setOpen(false)}
@@ -577,7 +597,7 @@ function ToastItem({ toast, onClose }) {
         background: k.bg, color: '#FFFFFF', fontFamily: font.text, fontSize: 14,
         padding: '12px 14px', borderRadius: radius.large, boxShadow: shadow.dropdown,
         minWidth: 280, maxWidth: 380, pointerEvents: 'auto',
-        animation: `${leaving ? 'trello-slide-out' : 'trello-slide-in'} .18s ease forwards`,
+        animation: `${leaving ? 'trello-slide-out' : 'trello-slide-in'} .16s cubic-bezier(0.16,1,0.3,1) forwards`,
       }}
     >
       <Icon size={18} style={{ flexShrink: 0 }} />

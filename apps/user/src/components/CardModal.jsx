@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Plus, Trash2, Pencil, X, Archive, Paperclip, Download, Image as ImageIcon,
-  FileText, Activity as ActivityIcon, Copy, Eye, EyeOff, Check,
+  FileText, Activity as ActivityIcon, Copy, Eye, EyeOff, Check, Clock, Search,
 } from 'lucide-react';
 import {
   Modal, Button, Input, Textarea, Avatar, LabelChip, Spinner, IconButton, useConfirm, useToast,
-  color, font, space, radius,
+  color, font, space, radius, shadow,
 } from '@trello/ui';
 import {
   useUpdateCard, useDeleteCard, useCardDetail, useComments, useAddComment,
@@ -19,6 +19,22 @@ import {
 import { MentionInput } from './MentionInput';
 
 const sectionLabel = { fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', color: color.textMuted, marginBottom: 10 };
+
+// ISO -> "YYYY-MM-DDTHH:mm" in LOCAL time for <input type="datetime-local">.
+function isoToLocalInput(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function formatDueDisplay(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
 
 function Comment({ c, cardId, currentUserId }) {
   const confirm = useConfirm();
@@ -218,53 +234,126 @@ function LabelsEditor({ boardId, card, boardLabels }) {
   );
 }
 
+function MemberAvatar({ m, onRemove }) {
+  const [hover, setHover] = useState(false);
+  return (
+    <span
+      title={m.name || m.email}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{ position: 'relative', display: 'inline-flex' }}
+    >
+      <Avatar name={m.name} email={m.email} src={m.avatarUrl} size={32} />
+      <button
+        type="button"
+        aria-label={`Remove ${m.name || m.email}`}
+        onClick={() => onRemove(m.id)}
+        style={{
+          position: 'absolute', top: -5, right: -5, width: 18, height: 18, borderRadius: '50%',
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+          border: `1px solid ${color.border}`, background: color.surface, color: color.danger,
+          opacity: hover ? 1 : 0, transform: hover ? 'scale(1)' : 'scale(0.8)',
+          transition: 'opacity .14s ease, transform .14s ease', boxShadow: shadow.subtle,
+        }}
+      >
+        <X size={11} />
+      </button>
+    </span>
+  );
+}
+
+function CandidateRow({ u, onAssign }) {
+  const [hover, setHover] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={() => onAssign(u.id)}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      aria-label={`Assign ${u.name || u.email}`}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 8, width: '100%', border: 'none',
+        background: hover ? color.surface : 'transparent', borderRadius: radius.base,
+        padding: '5px 6px', cursor: 'pointer', textAlign: 'left', transition: 'background .12s',
+      }}
+    >
+      <Avatar name={u.name} email={u.email} src={u.avatarUrl} size={28} />
+      <span style={{ minWidth: 0, flex: 1 }}>
+        <span style={{ display: 'block', fontSize: 13, fontWeight: 600, color: color.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.name || u.email}</span>
+        {u.name && u.email && (
+          <span style={{ display: 'block', fontSize: 11, color: color.textMuted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</span>
+        )}
+      </span>
+      <Plus size={14} color={color.textMuted} />
+    </button>
+  );
+}
+
 function MembersEditor({ boardId, workspaceId, card }) {
   const boardQ = useBoardMembers(boardId);
   const wsQ = useWorkspaceMembers(workspaceId);
   const add = useAddCardMember(boardId, card.id);
   const remove = useRemoveCardMember(boardId, card.id);
   const [picking, setPicking] = useState(false);
+  const [query, setQuery] = useState('');
   const assigned = card.members ?? [];
   const assignedIds = new Set(assigned.map((m) => m.id));
 
   // Candidates = workspace + board members, de-duped, not already assigned.
-  const pool = new Map();
-  [...(wsQ.data ?? []), ...(boardQ.data ?? [])].forEach((u) => {
-    const id = u.id || u.userId;
-    if (id && !assignedIds.has(id)) pool.set(id, { id, name: u.name, email: u.email, avatarUrl: u.avatarUrl });
-  });
-  const candidates = [...pool.values()];
+  const candidates = useMemo(() => {
+    const pool = new Map();
+    [...(wsQ.data ?? []), ...(boardQ.data ?? [])].forEach((u) => {
+      const id = u.id || u.userId;
+      if (id && !assignedIds.has(id)) pool.set(id, { id, name: u.name, email: u.email, avatarUrl: u.avatarUrl });
+    });
+    return [...pool.values()];
+  }, [wsQ.data, boardQ.data, assigned.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return candidates;
+    return candidates.filter((u) => `${u.name || ''} ${u.email || ''}`.toLowerCase().includes(q));
+  }, [candidates, query]);
+
+  const onAssign = (id) => { add.mutate(id); setQuery(''); };
 
   return (
     <div>
       <div style={{ ...sectionLabel, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span>Members</span>
-        <IconButton label="Add member" size={22} onClick={() => setPicking((v) => !v)}><Plus size={14} /></IconButton>
+        <IconButton label="Add member" size={22} active={picking} onClick={() => setPicking((v) => !v)}><Plus size={14} /></IconButton>
       </div>
-      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: assigned.length ? 6 : 0 }}>
-        {assigned.map((m) => (
-          <span key={m.id} style={{ position: 'relative', display: 'inline-flex' }}>
-            <Avatar name={m.name} email={m.email} src={m.avatarUrl} size={32} />
-            <IconButton label="Remove member" size={18} onClick={() => remove.mutate(m.id)}
-              style={{ position: 'absolute', top: -4, right: -4, background: color.surface }}>
-              <X size={11} />
-            </IconButton>
-          </span>
-        ))}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: assigned.length ? 8 : 0 }}>
+        {assigned.map((m) => <MemberAvatar key={m.id} m={m} onRemove={remove.mutate} />)}
         {assigned.length === 0 && !picking && <span style={{ fontSize: 13, color: color.textMuted }}>No members. Click + to add.</span>}
       </div>
       {picking && (
-        <div style={{ border: `1px solid ${color.border}`, borderRadius: radius.large, padding: space.sm, background: color.surfaceAlt, marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
-          {candidates.length === 0 && (
-            <span style={{ fontSize: 12, color: color.textMuted }}>No one to add. Invite people via the workspace “Members” button.</span>
+        <div style={{
+          border: `1px solid ${color.border}`, borderRadius: radius.large, padding: space.sm,
+          background: color.surface, marginTop: 8, boxShadow: shadow.subtle,
+          animation: 'trello-panel-in .14s cubic-bezier(0.16,1,0.3,1) both',
+        }}>
+          {candidates.length > 5 && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 6, padding: '4px 8px', marginBottom: 6,
+              border: `1px solid ${color.border}`, borderRadius: radius.base, background: color.surfaceAlt,
+            }}>
+              <Search size={14} color={color.textMuted} />
+              <input
+                autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search members…"
+                style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: 13, color: color.text, fontFamily: font.text }}
+              />
+            </div>
           )}
-          {candidates.map((u) => (
-            <button key={u.id} onClick={() => add.mutate(u.id)} aria-label={`Assign ${u.name || u.email}`}
-              style={{ display: 'flex', alignItems: 'center', gap: 8, border: 'none', background: 'transparent', borderRadius: radius.base, padding: 4, cursor: 'pointer', textAlign: 'left' }}>
-              <Avatar name={u.name} email={u.email} src={u.avatarUrl} size={26} />
-              <span style={{ fontSize: 13, color: color.text }}>{u.name || u.email}</span>
-            </button>
-          ))}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 220, overflowY: 'auto' }}>
+            {filtered.map((u) => <CandidateRow key={u.id} u={u} onAssign={onAssign} />)}
+            {candidates.length === 0 && (
+              <span style={{ fontSize: 12, color: color.textMuted, padding: 4 }}>No one to add. Invite people via the workspace “Members” button.</span>
+            )}
+            {candidates.length > 0 && filtered.length === 0 && (
+              <span style={{ fontSize: 12, color: color.textMuted, padding: 4 }}>No matches.</span>
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -448,13 +537,13 @@ export function CardModal({ card, boardId, board, onClose }) {
   useEffect(() => {
     setTitle(card?.title ?? '');
     setDescription(card?.description ?? '');
-    setDue(card?.dueDate ? card.dueDate.slice(0, 10) : '');
+    setDue(isoToLocalInput(card?.dueDate));
   }, [card]);
 
   useEffect(() => {
     if (detailQ.data) {
       setDescription(detailQ.data.description ?? '');
-      setDue(detailQ.data.dueDate ? detailQ.data.dueDate.slice(0, 10) : '');
+      setDue(isoToLocalInput(detailQ.data.dueDate));
     }
   }, [detailQ.data]);
 
@@ -482,7 +571,8 @@ export function CardModal({ card, boardId, board, onClose }) {
   const comments = commentsQ.data ?? [];
   const checklists = full.checklists ?? [];
   const descDirty = description !== (full.description ?? '');
-  const currentDue = full.dueDate ? full.dueDate.slice(0, 10) : '';
+  const currentDue = isoToLocalInput(full.dueDate);
+  const dueOverdue = full.dueDate ? new Date(full.dueDate) < new Date() : false;
 
   const saveDescription = () => update.mutate(
     { cardId: card.id, patch: { description } },
@@ -492,7 +582,11 @@ export function CardModal({ card, boardId, board, onClose }) {
 
   const saveDue = () => {
     if (due === currentDue) return; // no change -> no write/activity
-    saveField({ dueDate: due ? new Date(`${due}T00:00:00`).toISOString() : null });
+    saveField({ dueDate: due ? new Date(due).toISOString() : null });
+  };
+  const clearDue = () => {
+    setDue('');
+    if (full.dueDate) saveField({ dueDate: null });
   };
 
   return (
@@ -566,7 +660,20 @@ export function CardModal({ card, boardId, board, onClose }) {
           <div><MembersEditor boardId={boardId} workspaceId={board?.workspaceId} card={full} /></div>
           <div>
             <div style={sectionLabel}>Due date</div>
-            <Input type="date" value={due} onChange={(e) => setDue(e.target.value)} onBlur={saveDue} />
+            <Input type="datetime-local" value={due} onChange={(e) => setDue(e.target.value)} onBlur={saveDue} />
+            {full.dueDate && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: space.sm, marginTop: 6 }}>
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600,
+                  padding: '3px 8px', borderRadius: radius.base,
+                  background: dueOverdue ? color.errorBg : color.surfaceAlt,
+                  color: dueOverdue ? color.danger : color.textMuted,
+                }}>
+                  <Clock size={13} /> {formatDueDisplay(full.dueDate)}{dueOverdue ? ' · Overdue' : ''}
+                </span>
+                <button onClick={clearDue} style={{ ...linkBtn, color: color.danger }}>Clear</button>
+              </div>
+            )}
           </div>
           <div style={{ borderTop: `1px solid ${color.border}`, paddingTop: space.base, display: 'flex', flexDirection: 'column', gap: space.sm }}>
             <Button variant="secondary" leftIcon={full.watching ? <EyeOff size={15} /> : <Eye size={15} />}

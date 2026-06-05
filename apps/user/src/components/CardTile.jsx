@@ -6,9 +6,11 @@ import { Avatar, LabelChip, color, font, radius, shadow, space } from '@trello/u
 function dueState(due) {
   if (!due) return null;
   const d = new Date(due);
-  const now = new Date();
-  const overdue = d < now;
-  return { label: d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }), overdue };
+  if (Number.isNaN(d.getTime())) return null;
+  const overdue = d < new Date();
+  const date = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const time = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  return { label: `${date}, ${time}`, overdue };
 }
 
 export function CardTile({ card, onClick, overlay = false }) {
