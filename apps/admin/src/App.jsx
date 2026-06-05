@@ -12,6 +12,7 @@ import { WorkspaceDetailPage } from './pages/WorkspaceDetail';
 import { RolesPage } from './pages/Roles';
 import { MonitoringPage } from './pages/Monitoring';
 import { SystemSettingsPage } from './pages/SystemSettings';
+import { LandingPage } from './pages/Landing';
 import { StoragePage } from './pages/Storage';
 import { AuditPage } from './pages/Audit';
 import { ProfilePage } from './pages/Profile';
@@ -78,6 +79,14 @@ export function App() {
           element={
             <RequirePermission role="super_admin">
               <SystemSettingsPage />
+            </RequirePermission>
+          }
+        />
+        <Route
+          path="/landing"
+          element={
+            <RequirePermission role="super_admin">
+              <LandingPage />
             </RequirePermission>
           }
         />

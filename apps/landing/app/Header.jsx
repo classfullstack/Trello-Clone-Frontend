@@ -11,15 +11,16 @@ const NAV = [
   { label: 'FAQ', href: '#faq' },
 ];
 
-export default function Header() {
+export default function Header({ brand }) {
   const [open, setOpen] = useState(false);
+  const brandName = brand?.name || 'Trello Clone';
 
   return (
     <header className="site-header">
       <div className="container site-header__inner">
-        <a href="#top" className="brand" aria-label="Trello Clone home">
+        <a href="#top" className="brand" aria-label={`${brandName} home`}>
           <span className="brand__mark"><IconBrand /></span>
-          Trello Clone
+          {brandName}
         </a>
 
         <nav className="nav-desktop" aria-label="Primary">

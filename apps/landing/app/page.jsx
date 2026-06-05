@@ -1,33 +1,10 @@
 import { color, USER_APP_URL } from './tokens';
+import { getLandingContent } from './content';
 import Header from './Header';
 import Faq from './Faq';
 import {
-  IconBoard, IconDrag, IconUsers, IconCheck, IconTag, IconShield,
-  IconCheckSmall, IconBrand, IconX, IconGithub, IconLinkedin,
+  getIcon, IconCheckSmall, IconBrand, IconX, IconGithub, IconLinkedin,
 } from './icons';
-
-const FEATURES = [
-  { icon: IconBoard, bg: color.blue, title: 'Boards & lists', body: 'Give every project a home. See work flow from to-do to done at a single glance.' },
-  { icon: IconDrag, bg: color.purple, title: 'Drag & drop', body: 'Move cards across lists with a smooth, natural drag. Reorder work in seconds.' },
-  { icon: IconUsers, bg: color.cyan, title: 'Real-time collaboration', body: 'Invite your team and watch moves, comments, and edits update live for everyone.' },
-  { icon: IconCheck, bg: color.green, title: 'Checklists', body: 'Break cards into steps and track completion with progress you can actually see.' },
-  { icon: IconTag, bg: color.blueDark, title: 'Labels & filters', body: 'Color-code cards and filter instantly to find exactly what you need, fast.' },
-  { icon: IconShield, bg: color.navyMedium, title: 'Admin console', body: 'Manage members, permissions, and workspace settings from one secure place.' },
-];
-
-const STEPS = [
-  { title: 'Create a board', body: 'Spin up a board for any project, sprint, or goal in a couple of clicks.' },
-  { title: 'Add lists & cards', body: 'Map your workflow into lists, then capture every task as a card you can move.' },
-  { title: 'Collaborate & ship', body: 'Invite your team, assign work, track progress in real time, and get it done.' },
-];
-
-const PLANS = [
-  { name: 'Free', price: '$0', per: 'forever', tag: 'For individuals getting started', features: ['Up to 10 boards', 'Unlimited cards', 'Drag & drop', 'Mobile + web'], cta: 'Start free' },
-  { name: 'Pro', price: '$5', per: '/ user / mo', tag: 'For growing teams', features: ['Unlimited boards', 'Real-time collaboration', 'Checklists & due dates', 'Labels & filters', 'Priority support'], cta: 'Start Pro trial', featured: true },
-  { name: 'Business', price: '$10', per: '/ user / mo', tag: 'For organizations', features: ['Everything in Pro', 'Admin console', 'Advanced permissions', 'Usage insights', 'SSO ready'], cta: 'Contact sales' },
-];
-
-const TRUST = ['Northwind', 'Acme Co', 'Globex', 'Initech', 'Umbrella', 'Hooli'];
 
 const FOOTER = {
   Product: ['Features', 'Pricing', 'Integrations', 'Changelog'],
@@ -35,37 +12,42 @@ const FOOTER = {
   Legal: ['Privacy', 'Terms', 'Security', 'Cookies'],
 };
 
-export default function Home() {
+export default async function Home() {
+  const content = await getLandingContent();
+  const { brand, hero, trust, features, steps, pricing, faq, footer } = content;
+
   return (
     <>
-      <Header />
+      <Header brand={brand} />
       <main id="top">
         {/* Hero */}
         <section className="hero">
           <div className="container hero__grid">
             <div>
-              <span className="eyebrow">Free to start · No credit card</span>
-              <h1>Organize anything, together.</h1>
-              <p className="hero__sub">
-                Boards, lists, and cards to manage your projects and keep your
-                team in sync. Simple, fast, and built for the way you work.
-              </p>
+              <span className="eyebrow">{hero.eyebrow}</span>
+              <h1>{hero.title}</h1>
+              <p className="hero__sub">{hero.subtitle}</p>
               <div className="hero__ctas">
-                <a href={USER_APP_URL} className="btn btn-primary btn-lg">Get started free</a>
-                <a href="#features" className="btn btn-secondary btn-lg">See features</a>
+                <a href={USER_APP_URL} className="btn btn-primary btn-lg">{hero.primaryCtaLabel}</a>
+                <a href="#features" className="btn btn-secondary btn-lg">{hero.secondaryCtaLabel}</a>
               </div>
-              <p className="hero__note">Join 12,000+ teams shipping work faster.</p>
+              {hero.note && <p className="hero__note">{hero.note}</p>}
             </div>
-            <BoardMock />
+            {hero.image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img className="hero__image" src={hero.image} alt={hero.title || 'Product preview'} />
+            ) : (
+              <BoardMock />
+            )}
           </div>
         </section>
 
         {/* Trust strip */}
         <section className="trust" aria-label="Trusted by teams">
           <div className="container trust__inner">
-            <p className="trust__label">Trusted by fast-moving teams worldwide</p>
+            <p className="trust__label">{trust.label}</p>
             <div className="trust__logos">
-              {TRUST.map((t) => (
+              {trust.logos.map((t) => (
                 <span className="trust__logo" key={t}>{t}</span>
               ))}
             </div>
@@ -80,15 +62,15 @@ export default function Home() {
               <p>A focused set of features that keep work moving, without the clutter.</p>
             </div>
             <div className="feature-grid">
-              {FEATURES.map((f) => {
-                const Icon = f.icon;
+              {features.map((f) => {
+                const Icon = getIcon(f.icon);
                 return (
                   <article className="feature-card" key={f.title}>
-                    <span className="feature-card__icon" style={{ background: f.bg }}>
+                    <span className="feature-card__icon" style={{ background: f.bg || color.blue }}>
                       <Icon />
                     </span>
                     <h3>{f.title}</h3>
-                    <p>{f.body}</p>
+                    <p>{f.desc}</p>
                   </article>
                 );
               })}
@@ -104,11 +86,11 @@ export default function Home() {
               <p>From blank board to shipped work, faster than your next coffee break.</p>
             </div>
             <div className="steps">
-              {STEPS.map((s, i) => (
+              {steps.map((s, i) => (
                 <article className="step" key={s.title}>
                   <span className="step__num">{i + 1}</span>
                   <h3>{s.title}</h3>
-                  <p>{s.body}</p>
+                  <p>{s.desc}</p>
                 </article>
               ))}
             </div>
@@ -123,27 +105,27 @@ export default function Home() {
               <p>Start free and upgrade as your team grows. Cancel anytime.</p>
             </div>
             <div className="price-grid">
-              {PLANS.map((p) => (
+              {pricing.map((p) => (
                 <article
-                  className={`price-card${p.featured ? ' price-card--featured' : ''}`}
+                  className={`price-card${p.recommended ? ' price-card--featured' : ''}`}
                   key={p.name}
                 >
-                  {p.featured && <span className="price-card__badge">RECOMMENDED</span>}
+                  {p.recommended && <span className="price-card__badge">RECOMMENDED</span>}
                   <h3>{p.name}</h3>
-                  <p className="price-card__tag">{p.tag}</p>
+                  {p.tag && <p className="price-card__tag">{p.tag}</p>}
                   <div className="price-card__price">
-                    {p.price}<span className="price-card__per"> {p.per}</span>
+                    {p.price}<span className="price-card__per"> {p.period}</span>
                   </div>
                   <ul className="price-card__list">
-                    {p.features.map((feat) => (
+                    {(p.features || []).map((feat) => (
                       <li key={feat}><IconCheckSmall /> {feat}</li>
                     ))}
                   </ul>
                   <a
                     href={USER_APP_URL}
-                    className={`btn ${p.featured ? 'btn-primary' : 'btn-secondary'}`}
+                    className={`btn ${p.recommended ? 'btn-primary' : 'btn-secondary'}`}
                   >
-                    {p.cta}
+                    {p.ctaLabel}
                   </a>
                 </article>
               ))}
@@ -158,7 +140,7 @@ export default function Home() {
               <h2>Frequently asked questions</h2>
               <p>Everything you need to know before you get started.</p>
             </div>
-            <Faq />
+            <Faq items={faq} />
           </div>
         </section>
 
@@ -168,7 +150,7 @@ export default function Home() {
             <div className="cta-banner">
               <h2>Ready to get your team organized?</h2>
               <p>Start free in seconds. No credit card, no setup, no clutter.</p>
-              <a href={USER_APP_URL} className="btn btn-on-dark btn-lg">Get started free</a>
+              <a href={USER_APP_URL} className="btn btn-on-dark btn-lg">{hero.primaryCtaLabel}</a>
             </div>
           </div>
         </section>
@@ -181,9 +163,9 @@ export default function Home() {
             <div className="footer-brand">
               <span className="brand">
                 <span className="brand__mark"><IconBrand /></span>
-                Trello Clone
+                {brand.name}
               </span>
-              <p>The simple, fast way to organize projects and collaborate with your team.</p>
+              <p>{footer.tagline}</p>
             </div>
             {Object.entries(FOOTER).map(([heading, links]) => (
               <div className="footer-col" key={heading}>
@@ -197,7 +179,7 @@ export default function Home() {
             ))}
           </div>
           <div className="footer-bottom">
-            <p>© {new Date().getFullYear()} Trello Clone. Built as a demo.</p>
+            <p>{footer.copyright}</p>
             <div className="footer-social">
               <a href="#top" aria-label="X (Twitter)"><IconX /></a>
               <a href="#top" aria-label="GitHub"><IconGithub /></a>
