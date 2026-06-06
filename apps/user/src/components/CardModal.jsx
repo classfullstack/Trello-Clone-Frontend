@@ -813,6 +813,12 @@ export function CardModal({ card, boardId, board, onClose }) {
               <input ref={commentFileRef} type="file" onChange={onCommentAttach} style={{ display: 'none' }} />
               <Button type="submit" loading={addComment.isPending} disabled={!comment.trim()} style={{ whiteSpace: 'nowrap' }}>Send</Button>
             </form>
+            {/\!\[[^\]]*\]\([^)]+\)/.test(comment) && (
+              <div style={{ marginBottom: space.base, padding: space.sm, border: `1px dashed ${color.border}`, borderRadius: radius.base, background: color.surfaceAlt }}>
+                <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: color.textMuted, marginBottom: 6 }}>Xem trước</div>
+                <Markdown>{comment}</Markdown>
+              </div>
+            )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: space.md }}>
               {commentsQ.isLoading && <Spinner size={18} />}
               {!commentsQ.isLoading && comments.map((c) => <Comment key={c.id} c={c} cardId={card.id} currentUserId={currentUserId} onReact={onReact} />)}
