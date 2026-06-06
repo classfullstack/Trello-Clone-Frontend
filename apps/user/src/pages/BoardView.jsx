@@ -34,7 +34,7 @@ import { CardModal } from '../components/CardModal';
 import { LabelsManager } from '../components/LabelsManager';
 import { BoardMembers } from '../components/BoardMembers';
 import { CustomFieldsManager } from '../components/CustomFieldsManager';
-import { recordRecentBoard } from '../lib/recentBoards';
+import { recordRecentBoard, removeRecentBoard } from '../lib/recentBoards';
 import { getSavedFilters, saveFilter, deleteFilter } from '../lib/savedFilters';
 import { Bookmark, Star } from 'lucide-react';
 
@@ -80,8 +80,11 @@ export function BoardView() {
   const [searchParams, setSearchParams] = useSearchParams();
   useBoardSocket(boardId);
 
-  const { board, lists, cards, isLoading, isError } = useBoardData(boardId);
+  const { board, lists, cards, isLoading, isError, notFound } = useBoardData(boardId);
   const [filter, setFilter] = useState(EMPTY_FILTER);
+
+  // Board deleted / no access: drop it from recents so it stops showing up.
+  useEffect(() => { if (notFound && boardId) removeRecentBoard(boardId); }, [notFound, boardId]);
   const activeFilterCount =
     (filter.text ? 1 : 0) + filter.labelIds.length + filter.memberIds.length + (filter.due ? 1 : 0);
 
@@ -444,8 +447,11 @@ export function BoardView() {
       {isLoading && <BoardSkeleton />}
 
       {isError && !isLoading && (
-        <EmptyState icon={<AlertTriangle size={36} />} title="Could not load board"
-          description="The board may be unavailable or the backend is offline." style={{ color: '#fff' }} />
+        <EmptyState icon={<AlertTriangle size={36} />}
+          title={notFound ? 'Board không tồn tại' : 'Could not load board'}
+          description={notFound ? 'Board này đã bị xoá hoặc bạn không có quyền truy cập.' : 'The board may be unavailable or the backend is offline.'}
+          style={{ color: '#fff' }}
+          action={<Button onClick={() => navigate('/')}>Về Workspaces</Button>} />
       )}
 
       {!isLoading && !isError && view === 'table' && (

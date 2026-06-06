@@ -64,6 +64,7 @@ export function useBoardData(boardId) {
     labels: boardQ.data?.labels ?? [],
     isLoading: boardQ.isLoading || (!nested && (listsQ.isLoading || cardsQ.isLoading)),
     isError: boardQ.isError || (!nested && (listsQ.isError || cardsQ.isError)),
+    notFound: boardQ.error?.response?.status === 404 || boardQ.error?.response?.status === 403,
   };
 }
 
