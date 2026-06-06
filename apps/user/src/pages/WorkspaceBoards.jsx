@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
-  ArrowLeft, Plus, MoreHorizontal, Pencil, Trash2, Archive, ArchiveRestore, Image, AlertTriangle, LayoutGrid, Star, Users, Copy,
+  ArrowLeft, Plus, MoreHorizontal, Pencil, Trash2, Archive, ArchiveRestore, Image, AlertTriangle, LayoutGrid, Star, Users, Copy, LayoutTemplate,
 } from 'lucide-react';
 import {
   Button, Input, Modal, Skeleton, EmptyState, IconButton, Dropdown, MenuItem, useConfirm,
@@ -25,6 +25,7 @@ export function WorkspaceBoards() {
   const [editing, setEditing] = useState(null); // { id, name }
   const [bgFor, setBgFor] = useState(null); // board id
   const [membersOpen, setMembersOpen] = useState(false);
+  const [templatesOpen, setTemplatesOpen] = useState(false);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['boards', workspaceId],
@@ -38,6 +39,12 @@ export function WorkspaceBoards() {
     enabled: !!workspaceId,
   });
   const ws = wsQ.data;
+
+  const templatesQ = useQuery({
+    queryKey: ['board-templates', workspaceId],
+    queryFn: async () => (await api.get('/boards', { params: { workspaceId, template: 1 } })).data,
+    enabled: !!workspaceId && templatesOpen,
+  });
 
   const create = useCreateBoard(workspaceId);
   const update = useUpdateBoard(workspaceId);
@@ -95,10 +102,30 @@ export function WorkspaceBoards() {
       </div>
       <WorkspaceMembers workspaceId={workspaceId} open={membersOpen} onClose={() => setMembersOpen(false)} />
 
-      <form onSubmit={onCreate} style={{ display: 'flex', gap: space.sm, maxWidth: 560, marginTop: space.lg, marginBottom: space.xl }}>
+      <form onSubmit={onCreate} style={{ display: 'flex', gap: space.sm, maxWidth: 640, marginTop: space.lg, marginBottom: space.xl }}>
         <Input placeholder="New board name" value={name} onChange={(e) => setName(e.target.value)} wrapStyle={{ flex: 1 }} />
         <Button type="submit" leftIcon={<Plus size={16} />} loading={create.isPending} disabled={!name.trim()} style={{ whiteSpace: 'nowrap' }}>Create</Button>
+        <Button type="button" variant="secondary" leftIcon={<LayoutTemplate size={16} />} onClick={() => setTemplatesOpen(true)} style={{ whiteSpace: 'nowrap' }}>From template</Button>
       </form>
+
+      <Modal open={templatesOpen} onClose={() => setTemplatesOpen(false)} title="Create board from template" size="sm">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: space.sm }}>
+          {templatesQ.isLoading && <Skeleton height={40} />}
+          {(templatesQ.data ?? []).map((t) => (
+            <button key={t.id} onClick={() => {
+              const n = window.prompt('New board name', t.name) ;
+              if (n == null) return;
+              copyBoard.mutate({ id: t.id, name: n.trim() || t.name }, { onSuccess: () => setTemplatesOpen(false) });
+            }} style={{ textAlign: 'left', padding: '10px 12px', border: `1px solid ${color.border}`, borderRadius: radius.base, background: color.surface, cursor: 'pointer' }}>
+              <div style={{ height: 28, borderRadius: radius.base, background: t.background || boardBackgrounds[0], marginBottom: 6 }} />
+              <span style={{ fontSize: 14, fontWeight: 600, color: color.text }}>{t.name}</span>
+            </button>
+          ))}
+          {templatesQ.data && templatesQ.data.length === 0 && (
+            <p style={{ fontSize: 13, color: color.textMuted, margin: 0 }}>No templates yet. Open a board → menu → "Save as template".</p>
+          )}
+        </div>
+      </Modal>
 
       {isLoading && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: space.lg }}>

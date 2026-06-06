@@ -22,6 +22,7 @@ import axios from 'axios';
 import { api } from '../lib/api';
 import { MentionInput } from './MentionInput';
 import { Markdown, markdownStyles } from './Markdown';
+import { STATUS_META } from './CardTile';
 
 const sectionLabel = { fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', color: color.textMuted, marginBottom: 10 };
 
@@ -739,6 +740,21 @@ export function CardModal({ card, boardId, board, onClose }) {
           border: 'none', outline: 'none', width: '100%', marginBottom: space.lg, background: 'transparent',
         }}
       />
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: space.sm, marginBottom: space.lg, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: color.textMuted }}>Status:</span>
+        {Object.entries(STATUS_META).map(([key, m]) => {
+          const on = full.status === key;
+          return (
+            <button key={key} onClick={() => saveField({ status: on ? null : key })} style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+              padding: '4px 10px', borderRadius: radius.pill,
+              border: `1.5px solid ${on ? m.color : color.border}`,
+              background: on ? m.color : color.surface, color: on ? '#fff' : color.textMuted,
+            }}>{m.label}</button>
+          );
+        })}
+      </div>
 
       <div className="cm-grid" style={{ display: 'flex', gap: space.xl, alignItems: 'flex-start' }}>
         {/* Main column */}

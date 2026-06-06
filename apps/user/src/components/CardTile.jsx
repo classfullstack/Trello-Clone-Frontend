@@ -3,6 +3,13 @@ import { CSS } from '@dnd-kit/utilities';
 import { Clock, MessageSquare, CheckSquare, Paperclip } from 'lucide-react';
 import { Avatar, LabelChip, color, font, radius, shadow, space } from '@trello/ui';
 
+export const STATUS_META = {
+  todo: { label: 'To do', color: '#8590A2' },
+  doing: { label: 'In progress', color: '#1868DB' },
+  done: { label: 'Done', color: '#4BCE97' },
+  blocked: { label: 'Blocked', color: '#F87168' },
+};
+
 const AGING_ENABLED = true;
 const AGE_WARN_DAYS = 14;
 const AGE_STALE_DAYS = 30;
@@ -89,6 +96,15 @@ export function CardTile({ card, onClick, overlay = false, selectMode = false, s
       {labels.length > 0 && (
         <div style={{ display: 'flex', gap: 4, marginBottom: 6, flexWrap: 'wrap' }}>
           {labels.map((l) => <LabelChip key={l.id} color={l.color} name={l.name} compact />)}
+        </div>
+      )}
+
+      {card.status && STATUS_META[card.status] && (
+        <div style={{ marginBottom: 6 }}>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700,
+            padding: '2px 8px', borderRadius: radius.pill, color: '#fff', background: STATUS_META[card.status].color,
+          }}>{STATUS_META[card.status].label}</span>
         </div>
       )}
 

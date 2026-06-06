@@ -9,7 +9,7 @@ import {
 import {
   Plus, MoreHorizontal, Pencil, Image, Archive, ArchiveRestore, Trash2, AlertTriangle,
   Filter as FilterIcon, X, FileText, Tag as TagIcon, Users, SlidersHorizontal, CalendarDays,
-  CheckSquare, MoveRight, Copy, Download, LayoutGrid, Table as TableIcon,
+  CheckSquare, MoveRight, Copy, Download, LayoutGrid, Table as TableIcon, LayoutTemplate,
 } from 'lucide-react';
 import {
   Button, Input, Textarea, Modal, Skeleton, EmptyState, IconButton, Dropdown, MenuItem, LabelChip, Avatar, useConfirm,
@@ -413,6 +413,9 @@ export function BoardView() {
             <MenuItem icon={<Users size={16} />} onClick={() => setMembersOpen(true)}>Members</MenuItem>
             <MenuItem icon={<SlidersHorizontal size={16} />} onClick={() => setFieldsOpen(true)}>Custom fields</MenuItem>
             <MenuItem icon={<Copy size={16} />} onClick={onCopyBoard}>Copy board</MenuItem>
+            <MenuItem icon={<LayoutTemplate size={16} />} onClick={() => updateBoard.mutate({ id: boardId, patch: { isTemplate: !board.isTemplate } })}>
+              {board.isTemplate ? 'Remove from templates' : 'Save as template'}
+            </MenuItem>
             <MenuItem icon={<Download size={16} />} onClick={() => exportBoardCsv(board, lists, cards)}>Export CSV</MenuItem>
             <MenuItem icon={<Download size={16} />} onClick={() => exportBoardJson(board, lists, cards)}>Export JSON</MenuItem>
             <MenuItem icon={board.archived ? <ArchiveRestore size={16} /> : <Archive size={16} />} onClick={onArchiveBoard}>
