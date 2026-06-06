@@ -1,12 +1,106 @@
 import { useState, useEffect, useRef, useId } from 'react';
 import { createPortal } from 'react-dom';
+import axios from 'axios';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { UserPlus, Search } from 'lucide-react';
+import { UserPlus, Search, Link as LinkIcon, Copy, Trash2, UploadCloud } from 'lucide-react';
 import {
   Modal, Button, Select, Avatar, Badge, Spinner, useToast,
   color, font, space, radius, shadow, focusRing,
 } from '@trello/ui';
 import { api } from '../lib/api';
+
+function InviteLinks({ workspaceId }) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const [role, setRole] = useState('ws_member');
+  const linksQ = useQuery({
+    queryKey: ['ws-invites', workspaceId],
+    queryFn: async () => (await api.get(`/workspaces/${workspaceId}/invites`)).data,
+    enabled: !!workspaceId,
+  });
+  const create = useMutation({
+    mutationFn: () => api.post(`/workspaces/${workspaceId}/invites`, { role }),
+    onSuccess: () => { toast.success('Invite link created.'); qc.invalidateQueries({ queryKey: ['ws-invites', workspaceId] }); },
+    onError: (e) => toast.error(e.response?.data?.message || 'Could not create link.'),
+  });
+  const revoke = useMutation({
+    mutationFn: (token) => api.delete(`/workspaces/${workspaceId}/invites/${token}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['ws-invites', workspaceId] }),
+  });
+  const urlFor = (t) => `${window.location.origin}/invite/${t}`;
+  const copy = (t) => navigator.clipboard?.writeText(urlFor(t)).then(() => toast.success('Link copied.'), () => {});
+  const links = linksQ.data ?? [];
+
+  return (
+    <div style={{ marginBottom: space.lg, padding: space.md, border: `1px solid ${color.border}`, borderRadius: radius.large }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: space.sm, marginBottom: space.sm }}>
+        <LinkIcon size={16} color={color.blue} />
+        <strong style={{ fontSize: 14, color: color.text }}>Invite links</strong>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: space.sm }}>
+          <Select value={role} onChange={(e) => setRole(e.target.value)} style={{ minHeight: 34 }}>
+            <option value="ws_member">Member</option>
+            <option value="ws_admin">Admin</option>
+            <option value="ws_guest">Guest</option>
+          </Select>
+          <Button size="sm" loading={create.isPending} onClick={() => create.mutate()}>Create link</Button>
+        </div>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {links.map((l) => (
+          <div key={l.token} style={{ display: 'flex', alignItems: 'center', gap: space.sm, fontSize: 13 }}>
+            <code style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: color.textMuted, fontFamily: font.mono }}>{urlFor(l.token)}</code>
+            <Badge>{l.role.replace('ws_', '')}</Badge>
+            <Button size="sm" variant="ghost" leftIcon={<Copy size={13} />} onClick={() => copy(l.token)}>Copy</Button>
+            <Button size="sm" variant="ghost" leftIcon={<Trash2 size={13} />} onClick={() => revoke.mutate(l.token)}>Revoke</Button>
+          </div>
+        ))}
+        {!linksQ.isLoading && links.length === 0 && <div style={{ fontSize: 13, color: color.textMuted }}>No active links.</div>}
+      </div>
+    </div>
+  );
+}
+
+function LogoRow({ workspaceId }) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const fileRef = useRef(null);
+  const wsQ = useQuery({
+    queryKey: ['ws-detail', workspaceId],
+    queryFn: async () => (await api.get(`/workspaces/${workspaceId}`)).data,
+    enabled: !!workspaceId,
+  });
+  const [busy, setBusy] = useState(false);
+  const onPick = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setBusy(true);
+    try {
+      const { data } = await api.post(`/workspaces/${workspaceId}/logo`, { filename: file.name, contentType: file.type });
+      await axios.put(data.uploadUrl, file, { headers: { 'Content-Type': file.type } });
+      await api.patch(`/workspaces/${workspaceId}`, { logoUrl: data.fileUrl });
+      qc.invalidateQueries({ queryKey: ['ws-detail', workspaceId] });
+      qc.invalidateQueries({ queryKey: ['workspaces'] });
+      toast.success('Logo updated.');
+    } catch (err) {
+      toast.error(err.response?.data?.message ?? 'Logo upload failed.');
+    } finally { setBusy(false); }
+  };
+  const ws = wsQ.data;
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: space.md, marginBottom: space.lg }}>
+      {ws?.logoUrl
+        ? <img src={ws.logoUrl} alt="logo" style={{ width: 48, height: 48, borderRadius: radius.large, objectFit: 'cover', border: `1px solid ${color.border}` }} />
+        : <div style={{ width: 48, height: 48, borderRadius: radius.large, background: color.surfaceAlt, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: color.textMuted, fontSize: 20 }}>{(ws?.name ?? 'W')[0]?.toUpperCase()}</div>}
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: 15, fontWeight: 700, color: color.text }}>{ws?.name ?? 'Workspace'}</div>
+        <div style={{ fontSize: 12, color: color.textMuted }}>Logo shown across the workspace</div>
+      </div>
+      <Button variant="secondary" size="sm" loading={busy} leftIcon={<UploadCloud size={15} />} onClick={() => fileRef.current?.click()}>Upload logo</Button>
+      <input ref={fileRef} type="file" accept="image/*" onChange={onPick} style={{ display: 'none' }} />
+    </div>
+  );
+}
 
 const ROLES = [
   { value: 'ws_admin', label: 'Admin' },
@@ -218,6 +312,8 @@ export function WorkspaceMembers({ workspaceId, open, onClose }) {
 
   return (
     <Modal open={open} onClose={onClose} title="Workspace members" size="lg">
+      {open && <LogoRow workspaceId={workspaceId} />}
+      {open && <InviteLinks workspaceId={workspaceId} />}
       <form onSubmit={onInvite} style={{ display: 'flex', gap: space.md, marginBottom: space.lg, alignItems: 'flex-end', flexWrap: 'wrap' }}>
         <div style={{ flex: 1, minWidth: 220 }}>
           <InviteCombobox email={email} setEmail={setEmail} />

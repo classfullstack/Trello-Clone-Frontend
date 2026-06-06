@@ -1,11 +1,69 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sun, Moon, Monitor, Check, AlertTriangle } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Sun, Moon, Monitor, Check, AlertTriangle, MonitorSmartphone, LogOut } from 'lucide-react';
 import {
-  Card, Skeleton, Button, Input, Modal, useTheme, useAuth,
+  Card, Skeleton, Button, Input, Modal, Badge, useTheme, useAuth, useToast,
   color, font, space, radius,
 } from '@trello/ui';
+import { api } from '../lib/api';
 import { useSettings, useUpdateSettings, useDeleteAccount } from '../lib/userData';
+
+function deviceLabel(ua) {
+  if (!ua) return 'Unknown device';
+  let browser = 'Browser';
+  if (/Edg/.test(ua)) browser = 'Edge';
+  else if (/Chrome/.test(ua)) browser = 'Chrome';
+  else if (/Safari/.test(ua)) browser = 'Safari';
+  else if (/Firefox/.test(ua)) browser = 'Firefox';
+  let os = '';
+  if (/Windows/.test(ua)) os = 'Windows';
+  else if (/Mac OS/.test(ua)) os = 'macOS';
+  else if (/Android/.test(ua)) os = 'Android';
+  else if (/iPhone|iPad|iOS/.test(ua)) os = 'iOS';
+  else if (/Linux/.test(ua)) os = 'Linux';
+  return os ? `${browser} on ${os}` : browser;
+}
+
+function SessionsCard() {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const sessionsQ = useQuery({
+    queryKey: ['me', 'sessions'],
+    queryFn: async () => (await api.get('/me/sessions')).data,
+  });
+  const revoke = useMutation({
+    mutationFn: (id) => api.delete(`/me/sessions/${id}`),
+    onSuccess: () => { toast.success('Session revoked.'); qc.invalidateQueries({ queryKey: ['me', 'sessions'] }); },
+    onError: () => toast.error('Could not revoke session.'),
+  });
+  const sessions = sessionsQ.data ?? [];
+  return (
+    <Card style={{ display: 'flex', flexDirection: 'column', gap: space.base }}>
+      <h2 style={{ fontFamily: font.display, fontSize: 20, fontWeight: 700, color: color.text, margin: 0 }}>Devices &amp; sessions</h2>
+      <div style={{ fontSize: 14, color: color.textMuted }}>Active sign-ins on your account. Revoke any you don't recognize.</div>
+      {sessionsQ.isLoading ? <Skeleton width="100%" height={40} /> : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: space.sm }}>
+          {sessions.map((s) => (
+            <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: space.md, padding: '10px 12px', border: `1px solid ${color.border}`, borderRadius: radius.base }}>
+              <MonitorSmartphone size={20} color={color.textMuted} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: color.text, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {deviceLabel(s.userAgent)} {s.current && <Badge kind="primary">This device</Badge>}
+                </div>
+                <div style={{ fontSize: 12, color: color.textMuted }}>
+                  {s.ipAddress || 'unknown IP'} · {new Date(s.createdAt).toLocaleString()}
+                </div>
+              </div>
+              {!s.current && <Button size="sm" variant="ghost" leftIcon={<LogOut size={14} />} onClick={() => revoke.mutate(s.id)}>Revoke</Button>}
+            </div>
+          ))}
+          {!sessionsQ.isLoading && sessions.length === 0 && <div style={{ fontSize: 13, color: color.textMuted }}>No active sessions.</div>}
+        </div>
+      )}
+    </Card>
+  );
+}
 
 const sectionTitle = { fontFamily: font.display, fontSize: 20, fontWeight: 700, color: color.text, margin: 0 };
 
@@ -158,6 +216,8 @@ export function Settings() {
           </>
         )}
       </Card>
+
+      <SessionsCard />
 
       <Card style={{ display: 'flex', flexDirection: 'column', gap: space.base, border: `1px solid ${color.danger}` }}>
         <h2 style={{ ...sectionTitle, color: color.danger }}>Danger zone</h2>

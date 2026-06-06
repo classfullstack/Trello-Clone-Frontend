@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Plus, Trash2, Pencil, X, Archive, Paperclip, Download, Image as ImageIcon,
   FileText, Activity as ActivityIcon, Copy, Eye, EyeOff, Check, Clock, Search, SmilePlus, SquareArrowOutUpRight,
+  Link as LinkIcon,
 } from 'lucide-react';
 import {
   Modal, Button, Input, Textarea, Avatar, LabelChip, Spinner, IconButton, useConfirm, useToast, useAuth,
@@ -17,6 +18,8 @@ import {
   useCreateBoardLabel, useDeleteBoardLabel, useWorkspaceMembers,
   useConvertChecklistItem, useToggleReaction,
 } from '../lib/boardData';
+import axios from 'axios';
+import { api } from '../lib/api';
 import { MentionInput } from './MentionInput';
 import { Markdown, markdownStyles } from './Markdown';
 
@@ -568,6 +571,7 @@ export function CardModal({ card, boardId, board, onClose }) {
 
   const [dragOver, setDragOver] = useState(false);
   const dragDepth = useRef(0);
+  const commentFileRef = useRef(null);
 
   const hasFiles = (e) => Array.from(e.dataTransfer?.types ?? []).includes('Files');
   const onDragEnter = (e) => {
@@ -637,6 +641,27 @@ export function CardModal({ card, boardId, board, onClose }) {
     addComment.mutate({ body, mentions }, { onSuccess: () => { setComment(''); setMentions([]); } });
   };
 
+  const copyCardLink = () => {
+    const url = `${window.location.origin}/b/${boardId}?card=${card.id}`;
+    navigator.clipboard?.writeText(url).then(() => toast.success('Link copied.'), () => toast.error('Copy failed.'));
+  };
+
+  const onCommentAttach = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    try {
+      const { data } = await api.post(`/cards/${card.id}/attachments/presign`, { filename: file.name, contentType: file.type });
+      await axios.put(data.uploadUrl, file, { headers: { 'Content-Type': file.type } });
+      const isImg = file.type.startsWith('image/');
+      const md = `${isImg ? '!' : ''}[${file.name}](${data.fileUrl})`;
+      setComment((c) => (c ? `${c}\n${md}` : md));
+      toast.success('Attached. Press Send to post.');
+    } catch (err) {
+      toast.error(err.response?.data?.message ?? 'Upload failed.');
+    }
+  };
+
   const onDeleteCard = async () => {
     const ok = await confirm({ title: 'Delete card?', message: 'This cannot be undone.', confirmText: 'Delete', danger: true });
     if (ok) del.mutate(card.id, { onSuccess: onClose });
@@ -696,6 +721,14 @@ export function CardModal({ card, boardId, board, onClose }) {
             style={{ position: 'absolute', top: 8, right: 8 }}>Remove cover</Button>
         </div>
       )}
+      <div style={{ display: 'flex', alignItems: 'center', gap: space.sm, marginBottom: space.sm }}>
+        {full.number != null && (
+          <span style={{ fontFamily: font.mono, fontSize: 13, fontWeight: 700, color: color.textMuted, background: color.surfaceAlt, borderRadius: radius.base, padding: '2px 8px' }}>#{full.number}</span>
+        )}
+        <button onClick={copyCardLink} title="Copy card link" style={{ ...linkBtn, marginLeft: 'auto' }}>
+          <LinkIcon size={13} /> Copy link
+        </button>
+      </div>
       <input
         value={title}
         onChange={(e) => setTitle(e.target.value)}
@@ -757,9 +790,11 @@ export function CardModal({ card, boardId, board, onClose }) {
 
           <div style={{ marginBottom: space.lg }}>
             <div style={sectionLabel}>Comments</div>
-            <form onSubmit={onComment} style={{ display: 'flex', gap: space.sm, marginBottom: space.base }}>
+            <form onSubmit={onComment} style={{ display: 'flex', gap: space.sm, marginBottom: space.base, alignItems: 'flex-start' }}>
               <MentionInput placeholder="Write a comment… use @ to mention" value={comment}
                 onChange={setComment} candidates={mentionCandidates} onMentionsChange={setMentions} />
+              <IconButton label="Attach file" onClick={() => commentFileRef.current?.click()}><Paperclip size={16} /></IconButton>
+              <input ref={commentFileRef} type="file" onChange={onCommentAttach} style={{ display: 'none' }} />
               <Button type="submit" loading={addComment.isPending} disabled={!comment.trim()} style={{ whiteSpace: 'nowrap' }}>Send</Button>
             </form>
             <div style={{ display: 'flex', flexDirection: 'column', gap: space.md }}>
