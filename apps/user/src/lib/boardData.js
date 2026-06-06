@@ -232,6 +232,30 @@ export function useWatchCard(cardId) {
   });
 }
 
+// Apply one of {move, label, archive} across many cards via existing endpoints.
+export function useBulkCardActions(boardId) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  return useMutation({
+    mutationFn: async ({ action, cardIds, listId, position, labelId }) => {
+      const run = (id) => {
+        if (action === 'move') return api.patch(`/cards/${id}/move`, { listId, position });
+        if (action === 'label') return api.post(`/cards/${id}/labels`, { labelId });
+        if (action === 'archive') return api.patch(`/cards/${id}`, { archived: true });
+        return Promise.reject(new Error('unknown action'));
+      };
+      const results = await Promise.allSettled(cardIds.map(run));
+      const ok = results.filter((r) => r.status === 'fulfilled').length;
+      return { ok, total: cardIds.length };
+    },
+    onSuccess: ({ ok, total }) => {
+      toast[ok === total ? 'success' : 'error'](`${ok}/${total} card${total > 1 ? 's' : ''} updated.`);
+      invalidateBoard(qc, boardId);
+    },
+    onError: () => toast.error('Bulk action failed.'),
+  });
+}
+
 export function useSortList(boardId) {
   const qc = useQueryClient();
   const toast = useToast();

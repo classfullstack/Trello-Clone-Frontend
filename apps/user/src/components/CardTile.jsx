@@ -1,6 +1,6 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Clock, MessageSquare, CheckSquare } from 'lucide-react';
+import { Clock, MessageSquare, CheckSquare, Paperclip } from 'lucide-react';
 import { Avatar, LabelChip, color, font, radius, shadow, space } from '@trello/ui';
 
 function dueState(due) {
@@ -13,11 +13,11 @@ function dueState(due) {
   return { label: `${date}, ${time}`, overdue };
 }
 
-export function CardTile({ card, onClick, overlay = false }) {
+export function CardTile({ card, onClick, overlay = false, selectMode = false, selected = false, onToggleSelect }) {
   const sortable = useSortable({
     id: card.id,
     data: { type: 'card', listId: card.listId },
-    disabled: overlay,
+    disabled: overlay || selectMode,
   });
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = sortable;
 
@@ -35,19 +35,34 @@ export function CardTile({ card, onClick, overlay = false }) {
     fontFamily: font.text,
     fontSize: 15,
     color: color.text,
-    border: `1px solid ${color.border}`,
+    border: selected ? `2px solid ${color.blue}` : `1px solid ${color.border}`,
     rotate: overlay ? '3deg' : undefined,
     width: overlay ? 280 : undefined,
+    position: 'relative',
   };
+
+  const handleClick = selectMode ? () => onToggleSelect?.(card.id) : onClick;
+  const dragProps = (overlay || selectMode) ? {} : { ...attributes, ...listeners };
 
   const labels = card.labels ?? [];
   const members = card.members ?? [];
   const due = dueState(card.dueDate);
   const count = card.commentCount ?? 0;
-  const cl = card.checklistSummary;
+  const attachments = card.attachmentCount ?? 0;
+  const cl = card.checklist ?? card.checklistSummary;
 
   return (
-    <div ref={overlay ? undefined : setNodeRef} style={style} {...(overlay ? {} : attributes)} {...(overlay ? {} : listeners)} onClick={onClick}>
+    <div ref={overlay ? undefined : setNodeRef} style={style} {...dragProps} onClick={handleClick}>
+      {selectMode && (
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={() => onToggleSelect?.(card.id)}
+          onClick={(e) => e.stopPropagation()}
+          aria-label="Select card"
+          style={{ position: 'absolute', top: 8, right: 8, zIndex: 1, cursor: 'pointer' }}
+        />
+      )}
       {card.coverUrl && (
         <img src={card.coverUrl} alt="" style={{ width: '100%', height: 120, objectFit: 'cover', display: 'block' }} />
       )}
@@ -60,7 +75,7 @@ export function CardTile({ card, onClick, overlay = false }) {
 
       <div style={{ lineHeight: '22px', fontWeight: 500 }}>{card.title}</div>
 
-      {(due || count > 0 || members.length > 0 || cl) && (
+      {(due || count > 0 || attachments > 0 || members.length > 0 || (cl && cl.total > 0)) && (
         <div style={{ display: 'flex', alignItems: 'center', gap: space.sm, marginTop: 6, flexWrap: 'wrap' }}>
           {due && (
             <span style={{
@@ -80,6 +95,11 @@ export function CardTile({ card, onClick, overlay = false }) {
           {count > 0 && (
             <span style={{ fontSize: 12, color: color.textMuted, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
               <MessageSquare size={12} /> {count}
+            </span>
+          )}
+          {attachments > 0 && (
+            <span style={{ fontSize: 12, color: color.textMuted, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+              <Paperclip size={12} /> {attachments}
             </span>
           )}
           <span style={{ flex: 1 }} />

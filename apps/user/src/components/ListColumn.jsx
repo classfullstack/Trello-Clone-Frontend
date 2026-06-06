@@ -12,7 +12,7 @@ import {
 } from '@trello/ui';
 import { CardTile } from './CardTile';
 
-export function ListColumn({ list, cards, onAddCard, onCardClick, onRename, onDelete, onArchive, onSort }) {
+export function ListColumn({ list, cards, onAddCard, onCardClick, onRename, onDelete, onArchive, onSort, selectMode = false, selectedIds, onToggleSelect }) {
   const [adding, setAdding] = useState(false);
   const [title, setTitle] = useState('');
   const [editing, setEditing] = useState(false);
@@ -101,7 +101,14 @@ export function ListColumn({ list, cards, onAddCard, onCardClick, onRename, onDe
       <div ref={setDropRef} style={{ overflowY: 'auto', flex: 1, minHeight: 8, padding: '4px 0' }}>
         <SortableContext items={cards.map((c) => c.id)} strategy={verticalListSortingStrategy}>
           {cards.map((c) => (
-            <CardTile key={c.id} card={c} onClick={() => onCardClick(c)} />
+            <CardTile
+              key={c.id}
+              card={c}
+              onClick={() => onCardClick(c)}
+              selectMode={selectMode}
+              selected={selectedIds?.has(c.id)}
+              onToggleSelect={onToggleSelect}
+            />
           ))}
         </SortableContext>
         {cards.length === 0 && (

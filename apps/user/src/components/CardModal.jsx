@@ -17,6 +17,7 @@ import {
   useCreateBoardLabel, useDeleteBoardLabel, useWorkspaceMembers,
 } from '../lib/boardData';
 import { MentionInput } from './MentionInput';
+import { Markdown, markdownStyles } from './Markdown';
 
 const sectionLabel = { fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', color: color.textMuted, marginBottom: 10 };
 
@@ -81,7 +82,7 @@ function Comment({ c, cardId, currentUserId }) {
               marginTop: 4, fontSize: 14, color: color.text, background: color.surfaceAlt,
               padding: '8px 12px', borderRadius: radius.large, wordBreak: 'break-word',
             }}>
-              {c.body}
+              <Markdown>{c.body}</Markdown>
             </div>
             {mine && (
               <div style={{ display: 'flex', gap: space.sm, marginTop: 4 }}>
@@ -521,6 +522,7 @@ export function CardModal({ card, boardId, board, onClose }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [due, setDue] = useState('');
+  const [descEditing, setDescEditing] = useState(false);
   const [comment, setComment] = useState('');
   const [mentions, setMentions] = useState([]);
 
@@ -576,9 +578,9 @@ export function CardModal({ card, boardId, board, onClose }) {
 
   const saveDescription = () => update.mutate(
     { cardId: card.id, patch: { description } },
-    { onSuccess: () => toast.success('Description saved.') },
+    { onSuccess: () => { toast.success('Description saved.'); setDescEditing(false); } },
   );
-  const cancelDescription = () => setDescription(full.description ?? '');
+  const cancelDescription = () => { setDescription(full.description ?? ''); setDescEditing(false); };
 
   const saveDue = () => {
     if (due === currentDue) return; // no change -> no write/activity
@@ -591,7 +593,7 @@ export function CardModal({ card, boardId, board, onClose }) {
 
   return (
     <Modal open={!!card} onClose={onClose} width={980} title={null} padded>
-      <style>{`@media (max-width:640px){.cm-grid{flex-direction:column}.cm-side{width:100%!important}}`}</style>
+      <style>{`@media (max-width:640px){.cm-grid{flex-direction:column}.cm-side{width:100%!important}}${markdownStyles}`}</style>
       {cover && (
         <div style={{ position: 'relative', marginBottom: space.lg }}>
           <img src={cover} alt="Card cover" style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: radius.large, display: 'block' }} />
@@ -616,17 +618,35 @@ export function CardModal({ card, boardId, board, onClose }) {
           <CustomFieldsEditor boardId={boardId} card={full} fields={board?.customFields ?? []} />
 
           <div style={{ marginBottom: space.lg }}>
-            <div style={sectionLabel}>Description</div>
-            <Textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Add a more detailed description…"
-              style={{ minHeight: 110 }}
-            />
-            {descDirty && (
-              <div style={{ display: 'flex', gap: space.sm, marginTop: space.sm }}>
-                <Button size="sm" loading={update.isPending} onClick={saveDescription}>Save</Button>
-                <Button size="sm" variant="ghost" onClick={cancelDescription}>Cancel</Button>
+            <div style={{ ...sectionLabel, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>Description</span>
+              <span style={{ fontSize: 11, fontWeight: 500, textTransform: 'none', letterSpacing: 0, color: color.textMuted }}>Markdown supported</span>
+            </div>
+            {descEditing ? (
+              <>
+                <Textarea
+                  autoFocus
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Add a more detailed description…"
+                  style={{ minHeight: 110 }}
+                />
+                <div style={{ display: 'flex', gap: space.sm, marginTop: space.sm }}>
+                  <Button size="sm" loading={update.isPending} onClick={saveDescription} disabled={!descDirty}>Save</Button>
+                  <Button size="sm" variant="ghost" onClick={cancelDescription}>Cancel</Button>
+                </div>
+              </>
+            ) : (
+              <div
+                onClick={() => setDescEditing(true)}
+                style={{
+                  cursor: 'pointer', borderRadius: radius.large, padding: '8px 12px',
+                  background: color.surfaceAlt, minHeight: 40,
+                }}
+              >
+                {full.description
+                  ? <Markdown>{full.description}</Markdown>
+                  : <span style={{ fontSize: 14, color: color.textMuted }}>Add a more detailed description…</span>}
               </div>
             )}
           </div>

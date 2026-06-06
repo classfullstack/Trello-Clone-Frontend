@@ -9,6 +9,7 @@ import {
 import {
   Plus, MoreHorizontal, Pencil, Image, Archive, ArchiveRestore, Trash2, AlertTriangle,
   Filter as FilterIcon, X, FileText, Tag as TagIcon, Users, SlidersHorizontal, CalendarDays,
+  CheckSquare, MoveRight,
 } from 'lucide-react';
 import {
   Button, Input, Textarea, Modal, Skeleton, EmptyState, IconButton, Dropdown, MenuItem, LabelChip, Avatar, useConfirm,
@@ -16,7 +17,7 @@ import {
 } from '@trello/ui';
 import {
   useBoardData, useCreateList, useUpdateList, useDeleteList, useMoveList,
-  useCreateCard, useMoveCard, useSortList,
+  useCreateCard, useMoveCard, useSortList, useBulkCardActions,
 } from '../lib/boardData';
 import { useUpdateBoard, useDeleteBoard } from '../lib/wsData';
 import { useBoardSocket } from '../lib/socket';
@@ -109,6 +110,38 @@ export function BoardView() {
   const [labelsOpen, setLabelsOpen] = useState(false);
   const [membersOpen, setMembersOpen] = useState(false);
   const [fieldsOpen, setFieldsOpen] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const bulk = useBulkCardActions(boardId);
+
+  const toggleSelect = (id) => setSelectedIds((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+  const clearSelection = () => setSelectedIds(new Set());
+  const exitSelect = () => { setSelectMode(false); clearSelection(); };
+  const selectedArr = useMemo(() => [...selectedIds], [selectedIds]);
+
+  const bulkMove = (listId) => {
+    const dest = cardsByList.get(listId) ?? [];
+    const last = dest.length ? dest[dest.length - 1].position : null;
+    bulk.mutate(
+      { action: 'move', cardIds: selectedArr, listId, position: midpoint(last, null) },
+      { onSuccess: exitSelect },
+    );
+  };
+  const bulkLabel = (labelId) => bulk.mutate(
+    { action: 'label', cardIds: selectedArr, labelId },
+    { onSuccess: exitSelect },
+  );
+  const bulkArchive = async () => {
+    const ok = await confirm({
+      title: `Archive ${selectedArr.length} card${selectedArr.length > 1 ? 's' : ''}?`,
+      message: 'Archived cards are hidden from the board.', confirmText: 'Archive',
+    });
+    if (ok) bulk.mutate({ action: 'archive', cardIds: selectedArr }, { onSuccess: exitSelect });
+  };
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
@@ -261,6 +294,15 @@ export function BoardView() {
           </Link>
         )}
         {board && (
+          <Button
+            variant="secondary" size="sm" leftIcon={<CheckSquare size={15} />}
+            onClick={() => (selectMode ? exitSelect() : setSelectMode(true))}
+            style={{ background: selectMode ? color.blue : 'rgba(255,255,255,0.18)', color: '#fff', border: 'none' }}
+          >
+            {selectMode ? 'Done' : 'Select'}
+          </Button>
+        )}
+        {board && (
           <FilterBar
             filter={filter}
             setFilter={setFilter}
@@ -314,6 +356,9 @@ export function BoardView() {
                   onArchive={onArchiveList}
                   onDelete={onDeleteList}
                   onSort={onSortList}
+                  selectMode={selectMode}
+                  selectedIds={selectedIds}
+                  onToggleSelect={toggleSelect}
                 />
               ))}
             </SortableContext>
@@ -398,6 +443,19 @@ export function BoardView() {
       <BoardMembers open={membersOpen} onClose={() => setMembersOpen(false)} boardId={boardId} workspaceId={board?.workspaceId} />
       <CustomFieldsManager open={fieldsOpen} onClose={() => setFieldsOpen(false)} boardId={boardId} fields={board?.customFields ?? []} />
 
+      {selectMode && selectedArr.length > 0 && (
+        <BulkActionBar
+          count={selectedArr.length}
+          lists={lists}
+          labels={board?.labels ?? []}
+          busy={bulk.isPending}
+          onMove={bulkMove}
+          onLabel={bulkLabel}
+          onArchive={bulkArchive}
+          onClear={clearSelection}
+        />
+      )}
+
       <CardModal card={openCard} boardId={boardId} board={board} onClose={() => setOpenCard(null)} />
     </div>
   );
@@ -417,6 +475,47 @@ function BoardSkeleton() {
       <div style={{ width: 296, flexShrink: 0 }}>
         <Skeleton height={44} radius={radius.large} style={{ background: 'rgba(255,255,255,0.5)' }} />
       </div>
+    </div>
+  );
+}
+
+function BulkActionBar({ count, lists, labels, busy, onMove, onLabel, onArchive, onClear }) {
+  return (
+    <div style={{
+      position: 'fixed', left: '50%', bottom: 20, transform: 'translateX(-50%)', zIndex: 50,
+      display: 'flex', alignItems: 'center', gap: space.sm, flexWrap: 'wrap', justifyContent: 'center',
+      maxWidth: 'calc(100vw - 32px)', padding: '10px 14px', borderRadius: radius.large,
+      background: color.surface, border: `1px solid ${color.border}`, boxShadow: shadow.hover,
+    }}>
+      <span style={{ fontFamily: font.text, fontSize: 14, fontWeight: 600, color: color.text }}>
+        {count} selected
+      </span>
+      <Dropdown
+        width={220}
+        trigger={<Button variant="secondary" size="sm" leftIcon={<MoveRight size={15} />} disabled={busy}>Move to list</Button>}
+      >
+        {lists.length === 0 && <MenuItem disabled>No lists</MenuItem>}
+        {lists.map((l) => (
+          <MenuItem key={l.id} onClick={() => onMove(l.id)}>{l.name}</MenuItem>
+        ))}
+      </Dropdown>
+      <Dropdown
+        width={220}
+        trigger={<Button variant="secondary" size="sm" leftIcon={<TagIcon size={15} />} disabled={busy}>Add label</Button>}
+      >
+        {labels.length === 0 && <MenuItem disabled>No labels</MenuItem>}
+        {labels.map((l) => (
+          <MenuItem key={l.id} onClick={() => onLabel(l.id)}>
+            <LabelChip color={l.color} name={l.name} />
+          </MenuItem>
+        ))}
+      </Dropdown>
+      <Button variant="secondary" size="sm" leftIcon={<Archive size={15} />} loading={busy} onClick={onArchive}>
+        Archive
+      </Button>
+      <Button variant="ghost" size="sm" leftIcon={<X size={15} />} onClick={onClear}>
+        Clear
+      </Button>
     </div>
   );
 }
