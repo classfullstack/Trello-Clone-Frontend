@@ -518,6 +518,32 @@ export function CardModal({ card, boardId, board, onClose }) {
   const detailQ = useCardDetail(card?.id);
   const commentsQ = useComments(card?.id);
   const addComment = useAddComment(card?.id);
+  const dropUpload = useUploadAttachment(boardId, card?.id);
+
+  const [dragOver, setDragOver] = useState(false);
+  const dragDepth = useRef(0);
+
+  const hasFiles = (e) => Array.from(e.dataTransfer?.types ?? []).includes('Files');
+  const onDragEnter = (e) => {
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    dragDepth.current += 1;
+    setDragOver(true);
+  };
+  const onDragOver = (e) => { if (hasFiles(e)) e.preventDefault(); };
+  const onDragLeave = (e) => {
+    if (!hasFiles(e)) return;
+    dragDepth.current -= 1;
+    if (dragDepth.current <= 0) { dragDepth.current = 0; setDragOver(false); }
+  };
+  const onDrop = (e) => {
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    dragDepth.current = 0;
+    setDragOver(false);
+    const files = Array.from(e.dataTransfer.files ?? []);
+    files.forEach((f) => dropUpload.mutate(f));
+  };
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -593,6 +619,29 @@ export function CardModal({ card, boardId, board, onClose }) {
 
   return (
     <Modal open={!!card} onClose={onClose} width={980} title={null} padded>
+      <div
+        style={{ position: 'relative' }}
+        onDragEnter={onDragEnter}
+        onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
+        onDrop={onDrop}
+      >
+      {dragOver && (
+        <div style={{
+          position: 'absolute', inset: -8, zIndex: 20, borderRadius: radius.large,
+          border: `2px dashed ${color.blue}`, background: 'rgba(38,132,255,0.10)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none',
+        }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: space.sm, color: color.blue, fontFamily: font.text, fontWeight: 700 }}>
+            <Paperclip size={28} /> Drop files to attach
+          </div>
+        </div>
+      )}
+      {dropUpload.isPending && (
+        <div style={{ position: 'absolute', top: 0, right: 0, zIndex: 21, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: color.textMuted }}>
+          <Spinner size={14} /> Uploading…
+        </div>
+      )}
       <style>{`@media (max-width:640px){.cm-grid{flex-direction:column}.cm-side{width:100%!important}}${markdownStyles}`}</style>
       {cover && (
         <div style={{ position: 'relative', marginBottom: space.lg }}>
@@ -713,6 +762,7 @@ export function CardModal({ card, boardId, board, onClose }) {
             </Button>
           </div>
         </div>
+      </div>
       </div>
     </Modal>
   );

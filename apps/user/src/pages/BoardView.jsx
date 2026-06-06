@@ -32,6 +32,9 @@ import { CardModal } from '../components/CardModal';
 import { LabelsManager } from '../components/LabelsManager';
 import { BoardMembers } from '../components/BoardMembers';
 import { CustomFieldsManager } from '../components/CustomFieldsManager';
+import { recordRecentBoard } from '../lib/recentBoards';
+import { getSavedFilters, saveFilter, deleteFilter } from '../lib/savedFilters';
+import { Bookmark, Star } from 'lucide-react';
 
 const EMPTY_FILTER = { text: '', labelIds: [], memberIds: [], due: '' };
 
@@ -110,6 +113,10 @@ export function BoardView() {
   useEffect(() => {
     try { localStorage.setItem(`board-view:${boardId}`, view); } catch { /* ignore */ }
   }, [view, boardId]);
+
+  useEffect(() => {
+    if (board?.id) recordRecentBoard(board);
+  }, [board?.id, board?.name, board?.background]);
 
   const [activeCard, setActiveCard] = useState(null);
   const [activeList, setActiveList] = useState(null);
@@ -367,6 +374,7 @@ export function BoardView() {
         )}
         {board && (
           <FilterBar
+            boardId={boardId}
             filter={filter}
             setFilter={setFilter}
             labels={board.labels ?? []}
@@ -601,12 +609,26 @@ const DUE_OPTIONS = [
   { key: 'none', label: 'No due date' },
 ];
 
-function FilterBar({ filter, setFilter, labels, members, count, onClear }) {
+function FilterBar({ boardId, filter, setFilter, labels, members, count, onClear }) {
+  const [saved, setSaved] = useState(() => getSavedFilters(boardId));
+  const [savingName, setSavingName] = useState('');
+  const [showSave, setShowSave] = useState(false);
+
   const toggle = (field, id) => setFilter((f) => {
     const set = new Set(f[field]);
     if (set.has(id)) set.delete(id); else set.add(id);
     return { ...f, [field]: [...set] };
   });
+
+  const onSave = () => {
+    const name = savingName.trim();
+    if (!name) return;
+    setSaved(saveFilter(boardId, name, filter));
+    setSavingName('');
+    setShowSave(false);
+  };
+  const onApply = (f) => setFilter({ ...EMPTY_FILTER, ...f });
+  const onDelete = (id) => setSaved(deleteFilter(boardId, id));
 
   const heading = { fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: color.textMuted, margin: '10px 0 6px' };
 
@@ -631,6 +653,46 @@ function FilterBar({ filter, setFilter, labels, members, count, onClear }) {
       }
     >
       <div onClick={(e) => e.stopPropagation()} style={{ padding: '4px 12px 12px', maxHeight: 420, overflowY: 'auto' }}>
+        <div style={{ ...heading, display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Bookmark size={12} /> Saved filters</span>
+          {count > 0 && (
+            <button onClick={() => setShowSave((v) => !v)} style={{
+              border: 'none', background: 'transparent', color: color.blue, cursor: 'pointer',
+              fontFamily: font.text, fontSize: 11, fontWeight: 700, padding: 0,
+            }}>
+              {showSave ? 'Cancel' : 'Save current'}
+            </button>
+          )}
+        </div>
+        {showSave && (
+          <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+            <Input placeholder="Filter name" value={savingName} onChange={(e) => setSavingName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && onSave()} wrapStyle={{ flex: 1 }} />
+            <Button size="sm" onClick={onSave} disabled={!savingName.trim()}>Save</Button>
+          </div>
+        )}
+        {saved.length === 0 ? (
+          <div style={{ fontSize: 12, color: color.textMuted, marginBottom: 4 }}>
+            {count > 0 ? 'Click "Save current" to store this filter.' : 'No saved filters yet.'}
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 4 }}>
+            {saved.map((s) => (
+              <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <button onClick={() => onApply(s.filter)} style={{
+                  flex: 1, display: 'flex', alignItems: 'center', gap: space.sm, border: 'none', cursor: 'pointer',
+                  background: 'transparent', borderRadius: radius.base, padding: '5px 6px',
+                  fontFamily: font.text, fontSize: 13, color: color.text, textAlign: 'left',
+                }}>
+                  <Star size={13} color={color.textMuted} />
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</span>
+                </button>
+                <IconButton label="Delete saved filter" size={24} onClick={() => onDelete(s.id)}><X size={13} /></IconButton>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div style={heading}>Keyword</div>
         <Input placeholder="Filter cards…" value={filter.text} onChange={(e) => setFilter((f) => ({ ...f, text: e.target.value }))} />
 

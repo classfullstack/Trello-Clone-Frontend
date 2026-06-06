@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, MoreHorizontal, Pencil, Trash2, FolderKanban, AlertTriangle } from 'lucide-react';
+import { Plus, MoreHorizontal, Pencil, Trash2, FolderKanban, AlertTriangle, Clock } from 'lucide-react';
 import {
   Button, Input, Modal, Card, Avatar, Skeleton, EmptyState, IconButton,
   Dropdown, MenuItem, useConfirm,
@@ -9,6 +9,7 @@ import {
 } from '@trello/ui';
 import { api } from '../lib/api';
 import { useCreateWorkspace, useRenameWorkspace, useDeleteWorkspace } from '../lib/wsData';
+import { getRecentBoards } from '../lib/recentBoards';
 
 async function fetchWorkspaces() {
   const res = await api.get('/workspaces');
@@ -53,6 +54,7 @@ export function Workspaces() {
   };
 
   const workspaces = data ?? [];
+  const recent = getRecentBoards();
 
   return (
     <div style={{ maxWidth: 1200, margin: '0 auto', padding: `${space.xxl} ${space.lg}` }}>
@@ -67,6 +69,39 @@ export function Workspaces() {
         </div>
         <Button leftIcon={<Plus size={16} />} onClick={() => setOpen(true)}>Create workspace</Button>
       </div>
+
+      {recent.length > 0 && (
+        <div style={{ marginBottom: space.xl }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: space.sm, marginBottom: space.md }}>
+            <Clock size={16} color={color.textMuted} />
+            <span style={{ fontFamily: font.text, fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', color: color.textMuted }}>
+              Recently viewed
+            </span>
+          </div>
+          <div style={{ display: 'flex', gap: space.md, overflowX: 'auto', paddingBottom: space.xs }}>
+            {recent.map((b) => (
+              <button
+                key={b.id}
+                onClick={() => navigate(`/b/${b.id}`)}
+                title={b.name}
+                style={{
+                  flexShrink: 0, width: 180, textAlign: 'left', cursor: 'pointer', padding: 0,
+                  borderRadius: radius.large, overflow: 'hidden', background: color.surface,
+                  border: `1px solid ${color.border}`, boxShadow: shadow.subtle,
+                }}
+              >
+                <div style={{ height: 56, background: b.background || boardBackgrounds[0] }} />
+                <div style={{
+                  padding: '8px 10px', fontFamily: font.text, fontSize: 14, fontWeight: 600, color: color.text,
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>
+                  {b.name}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {isLoading && (
         <div style={gridStyle}>

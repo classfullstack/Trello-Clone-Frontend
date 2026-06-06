@@ -3,6 +3,22 @@ import { CSS } from '@dnd-kit/utilities';
 import { Clock, MessageSquare, CheckSquare, Paperclip } from 'lucide-react';
 import { Avatar, LabelChip, color, font, radius, shadow, space } from '@trello/ui';
 
+const AGING_ENABLED = true;
+const AGE_WARN_DAYS = 14;
+const AGE_STALE_DAYS = 30;
+
+function ageTier(card) {
+  if (!AGING_ENABLED) return null;
+  const ts = card.updatedAt ?? card.createdAt;
+  if (!ts) return null;
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return null;
+  const days = (Date.now() - d.getTime()) / 86400000;
+  if (days >= AGE_STALE_DAYS) return 'stale';
+  if (days >= AGE_WARN_DAYS) return 'warn';
+  return null;
+}
+
 function dueState(due) {
   if (!due) return null;
   const d = new Date(due);
@@ -21,10 +37,13 @@ export function CardTile({ card, onClick, overlay = false, selectMode = false, s
   });
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = sortable;
 
+  const aging = overlay ? null : ageTier(card);
+  const baseOpacity = aging === 'stale' ? 0.72 : aging === 'warn' ? 0.88 : 1;
+
   const style = {
     transform: overlay ? undefined : CSS.Transform.toString(transform),
     transition,
-    opacity: !overlay && isDragging ? 0.3 : 1,
+    opacity: !overlay && isDragging ? 0.3 : baseOpacity,
     background: color.surface,
     borderRadius: radius.large,
     boxShadow: overlay ? shadow.hover : shadow.subtle,
@@ -73,7 +92,15 @@ export function CardTile({ card, onClick, overlay = false, selectMode = false, s
         </div>
       )}
 
-      <div style={{ lineHeight: '22px', fontWeight: 500 }}>{card.title}</div>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+        <span style={{ flex: 1, lineHeight: '22px', fontWeight: 500 }}>{card.title}</span>
+        {aging && (
+          <span title={aging === 'stale' ? `Inactive ${AGE_STALE_DAYS}+ days` : `Inactive ${AGE_WARN_DAYS}+ days`}
+            style={{ marginTop: 3, color: color.textMuted, opacity: aging === 'stale' ? 0.85 : 0.55, flexShrink: 0 }}>
+            <Clock size={13} />
+          </span>
+        )}
+      </div>
 
       {(due || count > 0 || attachments > 0 || members.length > 0 || (cl && cl.total > 0)) && (
         <div style={{ display: 'flex', alignItems: 'center', gap: space.sm, marginTop: 6, flexWrap: 'wrap' }}>
