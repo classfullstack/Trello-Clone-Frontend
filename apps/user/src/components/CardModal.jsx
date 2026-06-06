@@ -722,7 +722,7 @@ export function CardModal({ card, boardId, board, onClose }) {
             style={{ position: 'absolute', top: 8, right: 8 }}>Remove cover</Button>
         </div>
       )}
-      <div style={{ display: 'flex', alignItems: 'center', gap: space.sm, marginBottom: space.sm }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: space.sm, marginBottom: space.sm, paddingRight: 44 }}>
         {full.number != null && (
           <span style={{ fontFamily: font.mono, fontSize: 13, fontWeight: 700, color: color.textMuted, background: color.surfaceAlt, borderRadius: radius.base, padding: '2px 8px' }}>#{full.number}</span>
         )}
