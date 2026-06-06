@@ -2,14 +2,14 @@ import { useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
-  ArrowLeft, Plus, MoreHorizontal, Pencil, Trash2, Archive, ArchiveRestore, Image, AlertTriangle, LayoutGrid, Star, Users,
+  ArrowLeft, Plus, MoreHorizontal, Pencil, Trash2, Archive, ArchiveRestore, Image, AlertTriangle, LayoutGrid, Star, Users, Copy,
 } from 'lucide-react';
 import {
   Button, Input, Modal, Skeleton, EmptyState, IconButton, Dropdown, MenuItem, useConfirm,
   color, font, space, shadow, radius, boardBackgrounds,
 } from '@trello/ui';
 import { api } from '../lib/api';
-import { useCreateBoard, useUpdateBoard, useDeleteBoard, useStarBoard } from '../lib/wsData';
+import { useCreateBoard, useUpdateBoard, useDeleteBoard, useStarBoard, useCopyBoard } from '../lib/wsData';
 import { WorkspaceMembers } from '../components/WorkspaceMembers';
 
 async function fetchBoards(workspaceId) {
@@ -36,6 +36,13 @@ export function WorkspaceBoards() {
   const update = useUpdateBoard(workspaceId);
   const remove = useDeleteBoard(workspaceId);
   const star = useStarBoard(workspaceId);
+  const copyBoard = useCopyBoard(workspaceId);
+
+  const onCopy = (b) => {
+    const n = window.prompt('Name for the copied board', `${b.name} (copy)`);
+    if (n == null) return;
+    copyBoard.mutate({ id: b.id, name: n.trim() || undefined });
+  };
 
   const onCreate = (e) => {
     e.preventDefault();
@@ -104,6 +111,7 @@ export function WorkspaceBoards() {
             onChangeBg={() => setBgFor(b.id)}
             onArchive={() => onArchive(b)}
             onDelete={() => onDelete(b)}
+            onCopy={() => onCopy(b)}
             onStar={() => star.mutate({ id: b.id, starred: !b.starred })}
           />
         ))}
@@ -135,7 +143,7 @@ export function WorkspaceBoards() {
   );
 }
 
-function BoardCard({ board, grad, onOpen, onRename, onChangeBg, onArchive, onDelete, onStar }) {
+function BoardCard({ board, grad, onOpen, onRename, onChangeBg, onArchive, onDelete, onStar, onCopy }) {
   return (
     <div style={{ position: 'relative' }}>
       <button
@@ -167,6 +175,7 @@ function BoardCard({ board, grad, onOpen, onRename, onChangeBg, onArchive, onDel
           }
         >
           <MenuItem icon={<Pencil size={16} />} onClick={onRename}>Rename</MenuItem>
+          <MenuItem icon={<Copy size={16} />} onClick={onCopy}>Copy board</MenuItem>
           <MenuItem icon={<Image size={16} />} onClick={onChangeBg}>Change background</MenuItem>
           <MenuItem icon={board.archived ? <ArchiveRestore size={16} /> : <Archive size={16} />} onClick={onArchive}>
             {board.archived ? 'Unarchive' : 'Archive'}

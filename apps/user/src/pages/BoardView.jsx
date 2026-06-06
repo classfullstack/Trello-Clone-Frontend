@@ -9,7 +9,7 @@ import {
 import {
   Plus, MoreHorizontal, Pencil, Image, Archive, ArchiveRestore, Trash2, AlertTriangle,
   Filter as FilterIcon, X, FileText, Tag as TagIcon, Users, SlidersHorizontal, CalendarDays,
-  CheckSquare, MoveRight,
+  CheckSquare, MoveRight, Copy, Download, LayoutGrid, Table as TableIcon,
 } from 'lucide-react';
 import {
   Button, Input, Textarea, Modal, Skeleton, EmptyState, IconButton, Dropdown, MenuItem, LabelChip, Avatar, useConfirm,
@@ -18,8 +18,11 @@ import {
 import {
   useBoardData, useCreateList, useUpdateList, useDeleteList, useMoveList,
   useCreateCard, useMoveCard, useSortList, useBulkCardActions,
+  useCopyList, useArchiveListCards,
 } from '../lib/boardData';
-import { useUpdateBoard, useDeleteBoard } from '../lib/wsData';
+import { useUpdateBoard, useDeleteBoard, useCopyBoard } from '../lib/wsData';
+import { exportBoardCsv, exportBoardJson } from '../lib/exportBoard';
+import { BoardTable } from '../components/BoardTable';
 import { useBoardSocket } from '../lib/socket';
 import { midpoint } from '../lib/position';
 import { ListColumn } from '../components/ListColumn';
@@ -95,8 +98,18 @@ export function BoardView() {
   const createCard = useCreateCard(boardId);
   const moveCard = useMoveCard(boardId);
   const sortList = useSortList(boardId);
+  const copyList = useCopyList(boardId);
+  const archiveListCards = useArchiveListCards(boardId);
   const updateBoard = useUpdateBoard(board?.workspaceId);
   const deleteBoard = useDeleteBoard(board?.workspaceId);
+  const copyBoard = useCopyBoard(board?.workspaceId);
+
+  const [view, setView] = useState(() => {
+    try { return localStorage.getItem(`board-view:${boardId}`) || 'board'; } catch { return 'board'; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(`board-view:${boardId}`, view); } catch { /* ignore */ }
+  }, [view, boardId]);
 
   const [activeCard, setActiveCard] = useState(null);
   const [activeList, setActiveList] = useState(null);
@@ -259,6 +272,14 @@ export function BoardView() {
   };
 
   const onSortList = (listId, by) => sortList.mutate({ listId, by });
+  const onCopyList = (listId) => copyList.mutate(listId);
+  const onArchiveListCards = async (list) => {
+    const ok = await confirm({
+      title: 'Archive all cards?', message: `All cards in "${list.name}" will be archived.`,
+      confirmText: 'Archive',
+    });
+    if (ok) archiveListCards.mutate(list.id);
+  };
   const onRenameList = (listId, name) => renameList.mutate({ listId, patch: { name } });
   const onArchiveList = (listId) => archiveList.mutate({ listId, patch: { archived: true } });
   const onDeleteList = async (list) => {
@@ -281,6 +302,13 @@ export function BoardView() {
       confirmText: 'Delete', danger: true,
     });
     if (ok) deleteBoard.mutate(boardId, { onSuccess: () => navigate('/') });
+  };
+  const onCopyBoard = () => {
+    const name = window.prompt('Name for the copied board', `${board?.name ?? 'Board'} (copy)`);
+    if (name == null) return;
+    copyBoard.mutate({ id: boardId, name: name.trim() || undefined }, {
+      onSuccess: (res) => { const id = res?.data?.id; if (id) navigate(`/b/${id}`); },
+    });
   };
   const pickBg = (bg) => updateBoard.mutate({ id: boardId, patch: { background: bg } }, { onSuccess: () => setBgOpen(false) });
   const submitBoardDesc = (e) => {
@@ -320,6 +348,24 @@ export function BoardView() {
           </Button>
         )}
         {board && (
+          <div style={{ display: 'inline-flex', background: 'rgba(255,255,255,0.18)', borderRadius: radius.base, padding: 2 }}>
+            <button onClick={() => setView('board')} aria-label="Board view" style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5, height: 28, padding: '0 10px', border: 'none',
+              borderRadius: radius.base, cursor: 'pointer', fontFamily: font.text, fontSize: 13, color: '#fff',
+              background: view === 'board' ? 'rgba(255,255,255,0.25)' : 'transparent',
+            }}>
+              <LayoutGrid size={14} /> Board
+            </button>
+            <button onClick={() => setView('table')} aria-label="Table view" style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5, height: 28, padding: '0 10px', border: 'none',
+              borderRadius: radius.base, cursor: 'pointer', fontFamily: font.text, fontSize: 13, color: '#fff',
+              background: view === 'table' ? 'rgba(255,255,255,0.25)' : 'transparent',
+            }}>
+              <TableIcon size={14} /> Table
+            </button>
+          </div>
+        )}
+        {board && (
           <FilterBar
             filter={filter}
             setFilter={setFilter}
@@ -340,6 +386,9 @@ export function BoardView() {
             <MenuItem icon={<TagIcon size={16} />} onClick={() => setLabelsOpen(true)}>Manage labels</MenuItem>
             <MenuItem icon={<Users size={16} />} onClick={() => setMembersOpen(true)}>Members</MenuItem>
             <MenuItem icon={<SlidersHorizontal size={16} />} onClick={() => setFieldsOpen(true)}>Custom fields</MenuItem>
+            <MenuItem icon={<Copy size={16} />} onClick={onCopyBoard}>Copy board</MenuItem>
+            <MenuItem icon={<Download size={16} />} onClick={() => exportBoardCsv(board, lists, cards)}>Export CSV</MenuItem>
+            <MenuItem icon={<Download size={16} />} onClick={() => exportBoardJson(board, lists, cards)}>Export JSON</MenuItem>
             <MenuItem icon={board.archived ? <ArchiveRestore size={16} /> : <Archive size={16} />} onClick={onArchiveBoard}>
               {board.archived ? 'Unarchive' : 'Archive'}
             </MenuItem>
@@ -355,7 +404,11 @@ export function BoardView() {
           description="The board may be unavailable or the backend is offline." style={{ color: '#fff' }} />
       )}
 
-      {!isLoading && !isError && (
+      {!isLoading && !isError && view === 'table' && (
+        <BoardTable lists={lists} cards={visibleCards} onCardClick={(c) => setOpenCard(c)} />
+      )}
+
+      {!isLoading && !isError && view === 'board' && (
         <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={onDragStart} onDragEnd={onDragEnd}>
           <div style={{
             display: 'flex', gap: space.base, padding: '20px 24px 24px',
@@ -373,6 +426,8 @@ export function BoardView() {
                   onArchive={onArchiveList}
                   onDelete={onDeleteList}
                   onSort={onSortList}
+                  onCopy={onCopyList}
+                  onArchiveCards={onArchiveListCards}
                   selectMode={selectMode}
                   selectedIds={selectedIds}
                   onToggleSelect={toggleSelect}

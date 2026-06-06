@@ -70,6 +70,19 @@ export function useDeleteBoard(workspaceId) {
   });
 }
 
+export function useCopyBoard(workspaceId) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  return useMutation({
+    mutationFn: ({ id, name }) => api.post(`/boards/${id}/copy`, name ? { name } : {}),
+    onSuccess: () => {
+      toast.success('Board copied.');
+      if (workspaceId) qc.invalidateQueries({ queryKey: ['boards', workspaceId] });
+    },
+    onError: () => toast.error('Could not copy board.'),
+  });
+}
+
 export function useStarBoard(workspaceId) {
   const qc = useQueryClient();
   const toast = useToast();

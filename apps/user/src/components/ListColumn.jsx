@@ -4,7 +4,7 @@ import { useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import {
   Plus, MoreHorizontal, Pencil, Trash2, Archive, GripVertical,
-  ArrowDownAZ, Calendar, Clock, ChevronRight, ChevronLeft,
+  ArrowDownAZ, Calendar, Clock, ChevronRight, ChevronLeft, Copy, ArchiveX,
 } from 'lucide-react';
 import {
   Button, Input, IconButton, Dropdown, MenuItem,
@@ -12,7 +12,7 @@ import {
 } from '@trello/ui';
 import { CardTile } from './CardTile';
 
-export function ListColumn({ list, cards, onAddCard, onCardClick, onRename, onDelete, onArchive, onSort, selectMode = false, selectedIds, onToggleSelect, openComposer, onComposerHandled }) {
+export function ListColumn({ list, cards, onAddCard, onCardClick, onRename, onDelete, onArchive, onSort, onCopy, onArchiveCards, selectMode = false, selectedIds, onToggleSelect, openComposer, onComposerHandled }) {
   const [adding, setAdding] = useState(false);
   const [title, setTitle] = useState('');
   const [editing, setEditing] = useState(false);
@@ -93,10 +93,12 @@ export function ListColumn({ list, cards, onAddCard, onCardClick, onRename, onDe
           trigger={<IconButton label="List actions" size={28}><MoreHorizontal size={16} /></IconButton>}
         >
           <MenuItem icon={<Pencil size={16} />} onClick={() => { setDraftName(list.name); setEditing(true); }}>Rename</MenuItem>
+          {onCopy && <MenuItem icon={<Copy size={16} />} onClick={() => onCopy(list.id)}>Copy list</MenuItem>}
           <MenuItem icon={<ChevronLeft size={16} />} onClick={() => setCollapsed(true)}>Collapse</MenuItem>
           {onSort && <MenuItem icon={<ArrowDownAZ size={16} />} onClick={() => onSort(list.id, 'name')}>Sort by name</MenuItem>}
           {onSort && <MenuItem icon={<Calendar size={16} />} onClick={() => onSort(list.id, 'due')}>Sort by due date</MenuItem>}
           {onSort && <MenuItem icon={<Clock size={16} />} onClick={() => onSort(list.id, 'created')}>Sort by created</MenuItem>}
+          {onArchiveCards && <MenuItem icon={<ArchiveX size={16} />} onClick={() => onArchiveCards(list)}>Archive all cards</MenuItem>}
           <MenuItem icon={<Archive size={16} />} onClick={() => onArchive(list.id)}>Archive</MenuItem>
           <MenuItem icon={<Trash2 size={16} />} danger onClick={() => onDelete(list)}>Delete</MenuItem>
         </Dropdown>

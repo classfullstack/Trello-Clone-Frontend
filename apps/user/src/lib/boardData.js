@@ -256,6 +256,26 @@ export function useBulkCardActions(boardId) {
   });
 }
 
+export function useCopyList(boardId) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  return useMutation({
+    mutationFn: (listId) => api.post(`/lists/${listId}/copy`),
+    onSuccess: () => { toast.success('List copied.'); invalidateBoard(qc, boardId); },
+    onError: () => toast.error('Could not copy list.'),
+  });
+}
+
+export function useArchiveListCards(boardId) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  return useMutation({
+    mutationFn: (listId) => api.post(`/lists/${listId}/archive-cards`),
+    onSuccess: () => { toast.success('Cards archived.'); invalidateBoard(qc, boardId); },
+    onError: () => toast.error('Could not archive cards.'),
+  });
+}
+
 export function useSortList(boardId) {
   const qc = useQueryClient();
   const toast = useToast();
