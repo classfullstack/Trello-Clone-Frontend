@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
@@ -12,12 +12,16 @@ import {
 } from '@trello/ui';
 import { CardTile } from './CardTile';
 
-export function ListColumn({ list, cards, onAddCard, onCardClick, onRename, onDelete, onArchive, onSort, selectMode = false, selectedIds, onToggleSelect }) {
+export function ListColumn({ list, cards, onAddCard, onCardClick, onRename, onDelete, onArchive, onSort, selectMode = false, selectedIds, onToggleSelect, openComposer, onComposerHandled }) {
   const [adding, setAdding] = useState(false);
   const [title, setTitle] = useState('');
   const [editing, setEditing] = useState(false);
   const [draftName, setDraftName] = useState(list.name);
   const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    if (openComposer) { setCollapsed(false); setAdding(true); onComposerHandled?.(); }
+  }, [openComposer, onComposerHandled]);
 
   const sortable = useSortable({ id: `list:${list.id}`, data: { type: 'list', listId: list.id } });
   const { attributes, listeners, setNodeRef: setSortableRef, transform, transition, isDragging } = sortable;

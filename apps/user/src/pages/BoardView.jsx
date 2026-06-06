@@ -23,6 +23,7 @@ import { useUpdateBoard, useDeleteBoard } from '../lib/wsData';
 import { useBoardSocket } from '../lib/socket';
 import { midpoint } from '../lib/position';
 import { ListColumn } from '../components/ListColumn';
+import { useHotkeys, isTyping } from '../lib/useHotkeys';
 import { CardTile } from '../components/CardTile';
 import { CardModal } from '../components/CardModal';
 import { LabelsManager } from '../components/LabelsManager';
@@ -112,7 +113,23 @@ export function BoardView() {
   const [fieldsOpen, setFieldsOpen] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [composerListId, setComposerListId] = useState(null);
   const bulk = useBulkCardActions(boardId);
+
+  useHotkeys((e) => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (isTyping()) return;
+    if (e.key === 'c' || e.key === 'C') {
+      const first = lists[0];
+      if (first) { e.preventDefault(); setComposerListId(first.id); }
+    } else if (e.key === 'f' || e.key === 'F') {
+      e.preventDefault();
+      document.querySelector('[data-board-filter]')?.click();
+    } else if (e.key === 'b' || e.key === 'B') {
+      e.preventDefault();
+      navigate('/');
+    }
+  });
 
   const toggleSelect = (id) => setSelectedIds((prev) => {
     const next = new Set(prev);
@@ -359,6 +376,8 @@ export function BoardView() {
                   selectMode={selectMode}
                   selectedIds={selectedIds}
                   onToggleSelect={toggleSelect}
+                  openComposer={composerListId === l.id}
+                  onComposerHandled={() => setComposerListId(null)}
                 />
               ))}
             </SortableContext>
@@ -541,7 +560,7 @@ function FilterBar({ filter, setFilter, labels, members, count, onClear }) {
       align="right"
       width={280}
       trigger={
-        <button style={{
+        <button data-board-filter style={{
           display: 'inline-flex', alignItems: 'center', gap: 6, height: 32, padding: '0 12px',
           border: 'none', borderRadius: radius.base, cursor: 'pointer', fontFamily: font.text, fontSize: 14,
           color: '#fff', background: count ? color.blue : 'rgba(255,255,255,0.18)',

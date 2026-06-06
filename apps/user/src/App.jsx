@@ -16,6 +16,7 @@ import { Profile } from './pages/Profile';
 import { Settings } from './pages/Settings';
 import { NotFound } from './pages/NotFound';
 import { NavBar } from './components/NavBar';
+import { GlobalShortcuts } from './components/GlobalShortcuts';
 
 function PageTransition({ children }) {
   const location = useLocation();
@@ -72,6 +73,7 @@ export function App() {
   return (
     <>
       {user && <ThemeSync />}
+      {user && <GlobalShortcuts />}
       <div style={{ minHeight: '100dvh', background: color.surfaceAlt }}>
         <Routes>
           <Route path="/login" element={<Login />} />

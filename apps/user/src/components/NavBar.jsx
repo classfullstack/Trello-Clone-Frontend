@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Home, User, Settings as SettingsIcon, LogOut, Layout, CreditCard, LayoutDashboard } from 'lucide-react';
+import { Search, Home, User, Settings as SettingsIcon, LogOut, Layout, CreditCard, LayoutDashboard, Keyboard } from 'lucide-react';
 import {
   useAuth, useToast, ThemeToggle, Avatar, Dropdown, MenuItem, MenuDivider, Spinner,
   color, font, radius, space, shadow,
@@ -34,6 +34,7 @@ function SearchBox() {
       }}>
         <Search size={18} aria-hidden style={{ color: color.mediumGray, flexShrink: 0 }} />
         <input
+          data-global-search
           placeholder="Search"
           value={q}
           onChange={(e) => { setQ(e.target.value); setOpen(true); }}
@@ -58,7 +59,7 @@ function SearchBox() {
             <>
               <div style={{ padding: '6px 12px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: color.textMuted }}>Boards</div>
               {results.boards.map((b) => (
-                <MenuItem key={b.id} icon={<Layout size={15} />} onClick={() => go(`/boards/${b.id}`)}>{b.name}</MenuItem>
+                <MenuItem key={b.id} icon={<Layout size={15} />} onClick={() => go(`/b/${b.id}`)}>{b.name}</MenuItem>
               ))}
             </>
           )}
@@ -66,7 +67,7 @@ function SearchBox() {
             <>
               <div style={{ padding: '6px 12px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: color.textMuted }}>Cards</div>
               {results.cards.map((c) => (
-                <MenuItem key={c.id} icon={<CreditCard size={15} />} onClick={() => go(`/boards/${c.boardId}?card=${c.id}`)}>
+                <MenuItem key={c.id} icon={<CreditCard size={15} />} onClick={() => go(`/b/${c.boardId}?card=${c.id}`)}>
                   <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.title}</span>
                     <span style={{ fontSize: 11, color: color.textMuted }}>{c.boardName} · {c.listName}</span>
@@ -152,6 +153,7 @@ export function NavBar() {
             <MenuItem icon={<LayoutDashboard size={16} />} onClick={() => navigate('/dashboard')}>Dashboard</MenuItem>
             <MenuItem icon={<User size={16} />} onClick={() => navigate('/profile')}>Profile</MenuItem>
             <MenuItem icon={<SettingsIcon size={16} />} onClick={() => navigate('/settings')}>Settings</MenuItem>
+            <MenuItem icon={<Keyboard size={16} />} onClick={() => window.dispatchEvent(new Event('trello:open-shortcuts'))}>Shortcuts</MenuItem>
             <MenuDivider />
             <MenuItem icon={<LogOut size={16} />} danger onClick={onLogout}>Log out</MenuItem>
           </Dropdown>
