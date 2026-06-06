@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, MoreHorizontal, Pencil, Trash2, FolderKanban, AlertTriangle, Clock } from 'lucide-react';
@@ -9,7 +9,7 @@ import {
 } from '@trello/ui';
 import { api } from '../lib/api';
 import { useCreateWorkspace, useRenameWorkspace, useDeleteWorkspace } from '../lib/wsData';
-import { getRecentBoards } from '../lib/recentBoards';
+import { getRecentBoards, setRecentBoards } from '../lib/recentBoards';
 
 async function fetchWorkspaces() {
   const res = await api.get('/workspaces');
@@ -54,7 +54,23 @@ export function Workspaces() {
   };
 
   const workspaces = data ?? [];
-  const recent = getRecentBoards();
+  const [recent, setRecent] = useState(() => getRecentBoards());
+
+  // Drop recently-viewed entries whose board no longer exists (deleted).
+  useEffect(() => {
+    const list = getRecentBoards();
+    if (list.length === 0) return;
+    let cancelled = false;
+    Promise.all(list.map((b) =>
+      api.get(`/boards/${b.id}`).then(() => b.id).catch((e) => (e.response?.status === 404 ? null : b.id)),
+    )).then((ids) => {
+      if (cancelled) return;
+      const valid = new Set(ids.filter(Boolean));
+      const pruned = list.filter((b) => valid.has(b.id));
+      if (pruned.length !== list.length) { setRecentBoards(pruned); setRecent(pruned); }
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   return (
     <div style={{ maxWidth: 1200, margin: '0 auto', padding: `${space.xxl} ${space.lg}` }}>

@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@trello/ui';
 import { api } from './api';
+import { removeRecentBoard } from './recentBoards';
 
 /* --------------------------------------------------------------- Workspace */
 
@@ -65,7 +66,11 @@ export function useDeleteBoard(workspaceId) {
   const toast = useToast();
   return useMutation({
     mutationFn: (id) => api.delete(`/boards/${id}`),
-    onSuccess: () => { toast.success('Board deleted.'); if (workspaceId) qc.invalidateQueries({ queryKey: ['boards', workspaceId] }); },
+    onSuccess: (_d, id) => {
+      toast.success('Board deleted.');
+      removeRecentBoard(id);
+      if (workspaceId) qc.invalidateQueries({ queryKey: ['boards', workspaceId] });
+    },
     onError: () => toast.error('Could not delete board.'),
   });
 }

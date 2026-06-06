@@ -10,6 +10,14 @@ export function getRecentBoards() {
   }
 }
 
+export function setRecentBoards(arr) {
+  try { localStorage.setItem(KEY, JSON.stringify(Array.isArray(arr) ? arr : [])); } catch { /* ignore */ }
+}
+
+export function removeRecentBoard(id) {
+  try { setRecentBoards(getRecentBoards().filter((b) => b.id !== id)); } catch { /* ignore */ }
+}
+
 export function recordRecentBoard(board) {
   if (!board?.id) return;
   try {
