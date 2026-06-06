@@ -205,6 +205,13 @@ export function GlobalStyles() {
       @keyframes trello-slide-in { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: translateX(0); } }
       @keyframes trello-slide-out { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(16px); } }
       @keyframes trello-panel-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+      @keyframes trello-fade-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+      /* Smooth interactions across both apps */
+      button, a, [role="button"], input, textarea, select {
+        transition: background-color .14s ease, border-color .14s ease, box-shadow .14s ease, color .14s ease, transform .12s ease, opacity .14s ease;
+      }
+      button:not(:disabled):active, [role="button"]:active { transform: translateY(1px); }
+      .trello-enter { animation: trello-fade-up .26s ease-out both; }
       @media (prefers-reduced-motion: reduce) {
         *, *::before, *::after {
           animation-duration: 0.001ms !important;

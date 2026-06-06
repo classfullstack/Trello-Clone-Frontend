@@ -78,7 +78,7 @@ export function CardTile({ card, onClick, overlay = false, selectMode = false, s
   const cl = card.checklist ?? card.checklistSummary;
 
   return (
-    <div ref={overlay ? undefined : setNodeRef} style={style} {...dragProps} onClick={handleClick}>
+    <div ref={overlay ? undefined : setNodeRef} className={!overlay && !isDragging ? 'trello-card-tile' : undefined} style={style} {...dragProps} onClick={handleClick}>
       {selectMode && (
         <input
           type="checkbox"

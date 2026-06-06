@@ -9,6 +9,7 @@ import {
   LogOut, Shield, Menu, Search, User, Settings, ShieldCheck, Activity, SlidersHorizontal, Megaphone, CloudUpload,
 } from 'lucide-react';
 import { meProfile } from '../lib/api';
+import { APP_VERSION } from '../lib/version';
 
 // `perm`/`role` gate visibility via usePermission; undefined = always visible.
 const NAV_GROUPS = [
@@ -116,7 +117,7 @@ function SidebarContent({ onNavigate }) {
         marginTop: 'auto', padding: space.base,
         fontSize: 12, color: 'rgba(255,255,255,0.4)',
       }}>
-        Admin Console v0.1
+        Admin Console {APP_VERSION}
       </div>
     </>
   );
