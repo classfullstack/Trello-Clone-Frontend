@@ -446,7 +446,7 @@ export function BackupPage() {
           <ol style={{ margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: space.sm, fontSize: 14, color: color.text, lineHeight: 1.55 }}>
             <li>Tạo project tại <code style={mono}>console.cloud.google.com</code> → Enable <strong>Google Drive API</strong>.</li>
             <li>OAuth consent screen: User type <strong>External</strong>, thêm email vào <strong>Test users</strong>.</li>
-            <li>Thêm scope <code style={mono}>drive.file</code> (chỉ thấy file do app tạo).</li>
+            <li>Data Access → thêm scope <code style={mono}>https://www.googleapis.com/auth/drive</code> (sensitive scope).</li>
             <li>Credentials → OAuth client ID → <strong>Web application</strong>. Authorized redirect URI:
               <div style={{ marginTop: 6 }}><code style={mono}>{`${window.location.origin.replace(/\/$/, '')}`}/api/backup/oauth/callback</code></div>
             </li>
