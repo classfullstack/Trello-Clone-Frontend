@@ -15,6 +15,7 @@ import { RolesPage } from './pages/Roles';
 import { MonitoringPage } from './pages/Monitoring';
 import { SystemSettingsPage } from './pages/SystemSettings';
 import { LandingPage } from './pages/Landing';
+import { BackupPage } from './pages/Backup';
 import { StoragePage } from './pages/Storage';
 import { AuditPage } from './pages/Audit';
 import { ProfilePage } from './pages/Profile';
@@ -122,6 +123,14 @@ export function App() {
           element={
             <RequirePermission permission="system.view_audit_log" role={['super_admin', 'admin', 'support']}>
               <AuditPage />
+            </RequirePermission>
+          }
+        />
+        <Route
+          path="/backup"
+          element={
+            <RequirePermission role="super_admin">
+              <BackupPage />
             </RequirePermission>
           }
         />

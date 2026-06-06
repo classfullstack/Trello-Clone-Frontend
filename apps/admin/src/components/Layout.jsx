@@ -6,7 +6,7 @@ import {
 } from '@trello/ui';
 import {
   LayoutDashboard, Users, KanbanSquare, ScrollText, HardDrive,
-  LogOut, Shield, Menu, Search, User, Settings, ShieldCheck, Activity, SlidersHorizontal, Megaphone,
+  LogOut, Shield, Menu, Search, User, Settings, ShieldCheck, Activity, SlidersHorizontal, Megaphone, CloudUpload,
 } from 'lucide-react';
 import { meProfile } from '../lib/api';
 
@@ -34,6 +34,7 @@ const NAV_GROUPS = [
       { to: '/audit', label: 'Audit Log', Icon: ScrollText, perm: 'system.view_audit_log' },
       { to: '/system', label: 'System Settings', Icon: SlidersHorizontal, role: 'super_admin' },
       { to: '/landing', label: 'Landing Page', Icon: Megaphone, role: 'super_admin' },
+      { to: '/backup', label: 'Backup', Icon: CloudUpload, role: 'super_admin' },
     ],
   },
 ];
