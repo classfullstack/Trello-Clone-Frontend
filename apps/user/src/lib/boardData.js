@@ -276,6 +276,16 @@ export function useArchiveListCards(boardId) {
   });
 }
 
+export function useMoveListToBoard(boardId) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  return useMutation({
+    mutationFn: ({ listId, targetBoardId }) => api.post(`/lists/${listId}/move`, { targetBoardId }),
+    onSuccess: () => { toast.success('List moved.'); invalidateBoard(qc, boardId); },
+    onError: () => toast.error('Could not move list.'),
+  });
+}
+
 export function useSortList(boardId) {
   const qc = useQueryClient();
   const toast = useToast();
@@ -369,6 +379,31 @@ export function useDeleteChecklistItem(cardId) {
     mutationFn: (itemId) => api.delete(`/checklist-items/${itemId}`),
     onSuccess: () => { toast.success('Item deleted.'); qc.invalidateQueries({ queryKey: ['card', cardId] }); },
     onError: () => toast.error('Could not delete item.'),
+  });
+}
+
+export function useConvertChecklistItem(cardId, boardId) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  return useMutation({
+    mutationFn: (itemId) => api.post(`/checklist-items/${itemId}/convert-to-card`),
+    onSuccess: () => {
+      toast.success('Converted to card.');
+      qc.invalidateQueries({ queryKey: ['card', cardId] });
+      if (boardId) invalidateBoard(qc, boardId);
+    },
+    onError: () => toast.error('Could not convert item.'),
+  });
+}
+
+export function useToggleReaction(cardId) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ cardId: cId, commentId, emoji }) => api.post('/reactions/toggle', { cardId: cId, commentId, emoji }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['card', cardId] });
+      qc.invalidateQueries({ queryKey: ['comments', cardId] });
+    },
   });
 }
 

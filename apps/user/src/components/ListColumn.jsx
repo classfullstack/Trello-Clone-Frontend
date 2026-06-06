@@ -5,6 +5,7 @@ import { CSS } from '@dnd-kit/utilities';
 import {
   Plus, MoreHorizontal, Pencil, Trash2, Archive, GripVertical,
   ArrowDownAZ, Calendar, Clock, ChevronRight, ChevronLeft, Copy, ArchiveX,
+  Gauge, ArrowRightLeft,
 } from 'lucide-react';
 import {
   Button, Input, IconButton, Dropdown, MenuItem,
@@ -12,7 +13,8 @@ import {
 } from '@trello/ui';
 import { CardTile } from './CardTile';
 
-export function ListColumn({ list, cards, onAddCard, onCardClick, onRename, onDelete, onArchive, onSort, onCopy, onArchiveCards, selectMode = false, selectedIds, onToggleSelect, openComposer, onComposerHandled }) {
+export function ListColumn({ list, cards, onAddCard, onCardClick, onRename, onDelete, onArchive, onSort, onCopy, onArchiveCards, onSetWip, onMove, selectMode = false, selectedIds, onToggleSelect, openComposer, onComposerHandled }) {
+  const overWip = list.wipLimit > 0 && cards.length > list.wipLimit;
   const [adding, setAdding] = useState(false);
   const [title, setTitle] = useState('');
   const [editing, setEditing] = useState(false);
@@ -85,15 +87,22 @@ export function ListColumn({ list, cards, onAddCard, onCardClick, onRename, onDe
             {list.name}
           </button>
         )}
-        {cards.length > 0 && !editing && (
+        {!editing && (list.wipLimit > 0 ? (
+          <span title={`WIP limit ${list.wipLimit}`} style={{
+            fontSize: 12, fontWeight: 700, padding: '1px 7px', borderRadius: radius.pill,
+            color: overWip ? '#fff' : color.textMuted, background: overWip ? color.danger : color.lightGray,
+          }}>{cards.length}/{list.wipLimit}</span>
+        ) : cards.length > 0 && (
           <span style={{ fontSize: 12, fontWeight: 500, color: color.textMuted }}>{cards.length}</span>
-        )}
+        ))}
         <Dropdown
           align="right" width={170}
           trigger={<IconButton label="List actions" size={28}><MoreHorizontal size={16} /></IconButton>}
         >
           <MenuItem icon={<Pencil size={16} />} onClick={() => { setDraftName(list.name); setEditing(true); }}>Rename</MenuItem>
           {onCopy && <MenuItem icon={<Copy size={16} />} onClick={() => onCopy(list.id)}>Copy list</MenuItem>}
+          {onMove && <MenuItem icon={<ArrowRightLeft size={16} />} onClick={() => onMove(list)}>Move to board…</MenuItem>}
+          {onSetWip && <MenuItem icon={<Gauge size={16} />} onClick={() => onSetWip(list)}>Set WIP limit</MenuItem>}
           <MenuItem icon={<ChevronLeft size={16} />} onClick={() => setCollapsed(true)}>Collapse</MenuItem>
           {onSort && <MenuItem icon={<ArrowDownAZ size={16} />} onClick={() => onSort(list.id, 'name')}>Sort by name</MenuItem>}
           {onSort && <MenuItem icon={<Calendar size={16} />} onClick={() => onSort(list.id, 'due')}>Sort by due date</MenuItem>}

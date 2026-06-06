@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Plus, Trash2, Pencil, X, Archive, Paperclip, Download, Image as ImageIcon,
-  FileText, Activity as ActivityIcon, Copy, Eye, EyeOff, Check, Clock, Search,
+  FileText, Activity as ActivityIcon, Copy, Eye, EyeOff, Check, Clock, Search, SmilePlus, SquareArrowOutUpRight,
 } from 'lucide-react';
 import {
-  Modal, Button, Input, Textarea, Avatar, LabelChip, Spinner, IconButton, useConfirm, useToast,
+  Modal, Button, Input, Textarea, Avatar, LabelChip, Spinner, IconButton, useConfirm, useToast, useAuth,
   color, font, space, radius, shadow,
 } from '@trello/ui';
 import {
@@ -15,6 +15,7 @@ import {
   useCardActivity, useDuplicateCard, useWatchCard,
   useBoardMembers, useAddCardMember, useRemoveCardMember, useSetCardFieldValue,
   useCreateBoardLabel, useDeleteBoardLabel, useWorkspaceMembers,
+  useConvertChecklistItem, useToggleReaction,
 } from '../lib/boardData';
 import { MentionInput } from './MentionInput';
 import { Markdown, markdownStyles } from './Markdown';
@@ -37,7 +38,7 @@ function formatDueDisplay(iso) {
   return d.toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
-function Comment({ c, cardId, currentUserId }) {
+function Comment({ c, cardId, currentUserId, onReact }) {
   const confirm = useConfirm();
   const edit = useEditComment(cardId);
   const del = useDeleteComment(cardId);
@@ -90,6 +91,7 @@ function Comment({ c, cardId, currentUserId }) {
                 <button onClick={onDelete} style={{ ...linkBtn, color: color.danger }}><Trash2 size={12} /> Delete</button>
               </div>
             )}
+            <ReactionBar reactions={c.reactions} currentUserId={currentUserId} onToggle={(emoji) => onReact({ commentId: c.id, emoji })} />
           </>
         )}
       </div>
@@ -102,7 +104,45 @@ const linkBtn = {
   color: color.textMuted, cursor: 'pointer', fontSize: 12, fontFamily: font.text, padding: 0,
 };
 
-function Checklist({ checklist, cardId }) {
+const EMOJIS = ['👍', '❤️', '😄', '🎉', '👀', '🚀', '✅', '🔥'];
+
+function ReactionBar({ reactions = [], currentUserId, onToggle }) {
+  const [picking, setPicking] = useState(false);
+  const groups = {};
+  for (const r of reactions) (groups[r.emoji] ??= []).push(r.userId);
+  const chip = (active) => ({
+    display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', fontSize: 13,
+    borderRadius: radius.pill, cursor: 'pointer', lineHeight: 1.6,
+    border: `1px solid ${active ? color.blue : color.border}`,
+    background: active ? 'rgba(24,104,219,0.12)' : color.surface, color: color.text,
+  });
+  return (
+    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginTop: 6, position: 'relative' }}>
+      {Object.entries(groups).map(([emoji, users]) => (
+        <button key={emoji} onClick={() => onToggle(emoji)} style={chip(currentUserId && users.includes(currentUserId))}>
+          {emoji} {users.length}
+        </button>
+      ))}
+      <button onClick={() => setPicking((p) => !p)} title="Add reaction" style={{ ...chip(false), color: color.textMuted }}>
+        <SmilePlus size={14} />
+      </button>
+      {picking && (
+        <div style={{
+          position: 'absolute', top: '100%', left: 0, marginTop: 4, zIndex: 30, display: 'flex', gap: 4,
+          background: color.surface, border: `1px solid ${color.border}`, borderRadius: radius.large,
+          padding: 6, boxShadow: shadow.dropdown,
+        }}>
+          {EMOJIS.map((e) => (
+            <button key={e} onClick={() => { onToggle(e); setPicking(false); }}
+              style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 18, padding: 2 }}>{e}</button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Checklist({ checklist, cardId, onConvert }) {
   const confirm = useConfirm();
   const toggle = useToggleChecklistItem(cardId);
   const addItem = useAddChecklistItem(cardId);
@@ -140,6 +180,7 @@ function Checklist({ checklist, cardId }) {
             <span style={{ flex: 1, color: it.done ? color.textMuted : color.text, textDecoration: it.done ? 'line-through' : 'none' }}>
               {it.text}
             </span>
+            {onConvert && <IconButton label="Convert to card" size={24} onClick={() => onConvert(it.id)}><SquareArrowOutUpRight size={13} /></IconButton>}
             <IconButton label="Delete item" size={24} onClick={() => onDeleteItem(it.id)}><Trash2 size={13} /></IconButton>
           </div>
         ))}
@@ -519,6 +560,11 @@ export function CardModal({ card, boardId, board, onClose }) {
   const commentsQ = useComments(card?.id);
   const addComment = useAddComment(card?.id);
   const dropUpload = useUploadAttachment(boardId, card?.id);
+  const convertItem = useConvertChecklistItem(card?.id, boardId);
+  const toggleReaction = useToggleReaction(card?.id);
+  const auth = useAuth();
+  const currentUserId = auth?.user?.id;
+  const onReact = ({ commentId, emoji }) => toggleReaction.mutate({ commentId, emoji });
 
   const [dragOver, setDragOver] = useState(false);
   const dragDepth = useRef(0);
@@ -700,9 +746,14 @@ export function CardModal({ card, boardId, board, onClose }) {
             )}
           </div>
 
-          {checklists.map((cl) => <Checklist key={cl.id} checklist={cl} cardId={card.id} />)}
+          {checklists.map((cl) => <Checklist key={cl.id} checklist={cl} cardId={card.id} onConvert={(itemId) => convertItem.mutate(itemId)} />)}
 
           <AttachmentsSection boardId={boardId} card={full} onSetCover={setCoverFromAttachment} />
+
+          <div style={{ marginBottom: space.lg }}>
+            <div style={sectionLabel}>Reactions</div>
+            <ReactionBar reactions={full.reactions} currentUserId={currentUserId} onToggle={(emoji) => toggleReaction.mutate({ cardId: card.id, emoji })} />
+          </div>
 
           <div style={{ marginBottom: space.lg }}>
             <div style={sectionLabel}>Comments</div>
@@ -713,7 +764,7 @@ export function CardModal({ card, boardId, board, onClose }) {
             </form>
             <div style={{ display: 'flex', flexDirection: 'column', gap: space.md }}>
               {commentsQ.isLoading && <Spinner size={18} />}
-              {!commentsQ.isLoading && comments.map((c) => <Comment key={c.id} c={c} cardId={card.id} currentUserId={full.currentUserId} />)}
+              {!commentsQ.isLoading && comments.map((c) => <Comment key={c.id} c={c} cardId={card.id} currentUserId={currentUserId} onReact={onReact} />)}
               {!commentsQ.isLoading && comments.length === 0 && (
                 <div style={{ fontSize: 13, color: color.textMuted }}>No comments yet.</div>
               )}

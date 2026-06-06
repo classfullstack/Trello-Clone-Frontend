@@ -18,8 +18,10 @@ import {
 import {
   useBoardData, useCreateList, useUpdateList, useDeleteList, useMoveList,
   useCreateCard, useMoveCard, useSortList, useBulkCardActions,
-  useCopyList, useArchiveListCards,
+  useCopyList, useArchiveListCards, useMoveListToBoard,
 } from '../lib/boardData';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '../lib/api';
 import { useUpdateBoard, useDeleteBoard, useCopyBoard } from '../lib/wsData';
 import { exportBoardCsv, exportBoardJson } from '../lib/exportBoard';
 import { BoardTable } from '../components/BoardTable';
@@ -103,6 +105,8 @@ export function BoardView() {
   const sortList = useSortList(boardId);
   const copyList = useCopyList(boardId);
   const archiveListCards = useArchiveListCards(boardId);
+  const setWip = useUpdateList(boardId, { successMessage: 'WIP limit updated.' });
+  const moveListToBoard = useMoveListToBoard(boardId);
   const updateBoard = useUpdateBoard(board?.workspaceId);
   const deleteBoard = useDeleteBoard(board?.workspaceId);
   const copyBoard = useCopyBoard(board?.workspaceId);
@@ -134,6 +138,12 @@ export function BoardView() {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [composerListId, setComposerListId] = useState(null);
+  const [moveListTarget, setMoveListTarget] = useState(null);
+  const otherBoardsQ = useQuery({
+    queryKey: ['boards', board?.workspaceId],
+    queryFn: async () => (await api.get('/boards', { params: { workspaceId: board.workspaceId } })).data,
+    enabled: !!moveListTarget && !!board?.workspaceId,
+  });
   const bulk = useBulkCardActions(boardId);
 
   useHotkeys((e) => {
@@ -280,6 +290,14 @@ export function BoardView() {
 
   const onSortList = (listId, by) => sortList.mutate({ listId, by });
   const onCopyList = (listId) => copyList.mutate(listId);
+  const onSetWip = (list) => {
+    const cur = list.wipLimit ? String(list.wipLimit) : '';
+    const v = window.prompt('Giới hạn số card (WIP). Để trống = bỏ giới hạn:', cur);
+    if (v === null) return;
+    const n = v.trim() === '' ? null : Math.max(0, parseInt(v, 10) || 0);
+    setWip.mutate({ listId: list.id, patch: { wipLimit: n } });
+  };
+  const onMoveList = (list) => setMoveListTarget(list);
   const onArchiveListCards = async (list) => {
     const ok = await confirm({
       title: 'Archive all cards?', message: `All cards in "${list.name}" will be archived.`,
@@ -436,6 +454,8 @@ export function BoardView() {
                   onSort={onSortList}
                   onCopy={onCopyList}
                   onArchiveCards={onArchiveListCards}
+                  onSetWip={onSetWip}
+                  onMove={onMoveList}
                   selectMode={selectMode}
                   selectedIds={selectedIds}
                   onToggleSelect={toggleSelect}
@@ -518,6 +538,21 @@ export function BoardView() {
               style={{ height: 56, borderRadius: radius.large, background: b, border: `1px solid ${color.border}`, cursor: 'pointer' }}
               aria-label="Pick background" />
           ))}
+        </div>
+      </Modal>
+
+      <Modal open={!!moveListTarget} onClose={() => setMoveListTarget(null)} title={`Move "${moveListTarget?.name ?? ''}" to board`} size="sm">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: space.sm }}>
+          {otherBoardsQ.isLoading && <Skeleton height={36} />}
+          {(otherBoardsQ.data ?? []).filter((b) => b.id !== boardId).map((b) => (
+            <button key={b.id} onClick={() => { moveListToBoard.mutate({ listId: moveListTarget.id, targetBoardId: b.id }); setMoveListTarget(null); }}
+              style={{ textAlign: 'left', padding: '10px 12px', border: `1px solid ${color.border}`, borderRadius: radius.base, background: color.surface, cursor: 'pointer', fontSize: 14, color: color.text }}>
+              {b.name}
+            </button>
+          ))}
+          {otherBoardsQ.data && otherBoardsQ.data.filter((b) => b.id !== boardId).length === 0 && (
+            <p style={{ fontSize: 13, color: color.textMuted, margin: 0 }}>No other board in this workspace.</p>
+          )}
         </div>
       </Modal>
 
