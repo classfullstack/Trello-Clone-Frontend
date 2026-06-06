@@ -263,7 +263,7 @@ export function BackupPage() {
 
   const connect = async () => {
     try {
-      const { data } = await api.get('/admin/backup/gdrive/oauth/start');
+      const { data } = await api.get('/admin/backup/gdrive/oauth/start', { params: { origin: window.location.origin } });
       const w = 560, h = 720;
       const x = window.screen.width / 2 - w / 2, y = window.screen.height / 2 - h / 2;
       window.open(data.authUrl, 'gdrive-oauth', `width=${w},height=${h},left=${x},top=${y}`);
