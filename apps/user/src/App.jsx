@@ -15,6 +15,7 @@ import { Dashboard } from './pages/Dashboard';
 import { Profile } from './pages/Profile';
 import { Settings } from './pages/Settings';
 import { InviteAccept } from './pages/InviteAccept';
+import { PublicProfile } from './pages/PublicProfile';
 import { NotFound } from './pages/NotFound';
 import { NavBar } from './components/NavBar';
 import { GlobalShortcuts } from './components/GlobalShortcuts';
@@ -89,6 +90,7 @@ export function App() {
           <Route path="/profile" element={<ProtectedRoute><Shell><Profile /></Shell></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Shell><Settings /></Shell></ProtectedRoute>} />
           <Route path="/invite/:token" element={<ProtectedRoute><InviteAccept /></ProtectedRoute>} />
+          <Route path="/u/:id" element={<ProtectedRoute><Shell><PublicProfile /></Shell></ProtectedRoute>} />
           <Route path="*" element={<ProtectedRoute><Shell><NotFound /></Shell></ProtectedRoute>} />
         </Routes>
       </div>

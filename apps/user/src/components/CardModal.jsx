@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Plus, Trash2, Pencil, X, Archive, Paperclip, Download, Image as ImageIcon,
   FileText, Activity as ActivityIcon, Copy, Eye, EyeOff, Check, Clock, Search, SmilePlus, SquareArrowOutUpRight,
-  Link as LinkIcon,
+  Link as LinkIcon, LayoutTemplate,
 } from 'lucide-react';
 import {
   Modal, Button, Input, Textarea, Avatar, LabelChip, Spinner, IconButton, useConfirm, useToast, useAuth,
@@ -628,7 +628,7 @@ export function CardModal({ card, boardId, board, onClose }) {
 
   if (!card) return null;
 
-  const saveField = (patch) => update.mutate({ cardId: card.id, patch });
+  const saveField = (patch, opts) => update.mutate({ cardId: card.id, patch }, opts);
 
   const setCoverFromAttachment = (a) =>
     update.mutate({ cardId: card.id, patch: { coverUrl: a.fileUrl } });
@@ -854,6 +854,10 @@ export function CardModal({ card, boardId, board, onClose }) {
             <Button variant="secondary" leftIcon={<Copy size={15} />} loading={duplicate.isPending}
               onClick={() => duplicate.mutate(card.id, { onSuccess: onClose })} style={{ justifyContent: 'flex-start' }}>
               Duplicate
+            </Button>
+            <Button variant="secondary" leftIcon={<LayoutTemplate size={15} />}
+              onClick={() => saveField({ isTemplate: !full.isTemplate }, { onSuccess: full.isTemplate ? undefined : onClose })} style={{ justifyContent: 'flex-start' }}>
+              {full.isTemplate ? 'Remove from templates' : 'Save as template'}
             </Button>
             <Button variant="secondary" leftIcon={<Archive size={15} />}
               onClick={() => saveField({ archived: !full.archived })} style={{ justifyContent: 'flex-start' }}>

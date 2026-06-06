@@ -20,7 +20,7 @@ import {
   useCreateCard, useMoveCard, useSortList, useBulkCardActions,
   useCopyList, useArchiveListCards, useMoveListToBoard,
 } from '../lib/boardData';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { useUpdateBoard, useDeleteBoard, useCopyBoard } from '../lib/wsData';
 import { exportBoardCsv, exportBoardJson } from '../lib/exportBoard';
@@ -139,11 +139,26 @@ export function BoardView() {
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [composerListId, setComposerListId] = useState(null);
   const [moveListTarget, setMoveListTarget] = useState(null);
+  const [tmplList, setTmplList] = useState(null);
+  const qc = useQueryClient();
   const otherBoardsQ = useQuery({
     queryKey: ['boards', board?.workspaceId],
     queryFn: async () => (await api.get('/boards', { params: { workspaceId: board.workspaceId } })).data,
     enabled: !!moveListTarget && !!board?.workspaceId,
   });
+  const cardTemplatesQ = useQuery({
+    queryKey: ['card-templates', boardId],
+    queryFn: async () => (await api.get(`/boards/${boardId}/card-templates`)).data,
+    enabled: !!tmplList,
+  });
+  const useCardTemplate = async (templateId) => {
+    try {
+      await api.post(`/cards/${templateId}/duplicate`, { listId: tmplList.id });
+      qc.invalidateQueries({ queryKey: ['board', boardId] });
+      qc.invalidateQueries({ queryKey: ['cards', boardId] });
+      setTmplList(null);
+    } catch { /* toast handled globally */ }
+  };
   const bulk = useBulkCardActions(boardId);
 
   useHotkeys((e) => {
@@ -459,6 +474,7 @@ export function BoardView() {
                   onArchiveCards={onArchiveListCards}
                   onSetWip={onSetWip}
                   onMove={onMoveList}
+                  onAddFromTemplate={setTmplList}
                   selectMode={selectMode}
                   selectedIds={selectedIds}
                   onToggleSelect={toggleSelect}
@@ -555,6 +571,21 @@ export function BoardView() {
           ))}
           {otherBoardsQ.data && otherBoardsQ.data.filter((b) => b.id !== boardId).length === 0 && (
             <p style={{ fontSize: 13, color: color.textMuted, margin: 0 }}>No other board in this workspace.</p>
+          )}
+        </div>
+      </Modal>
+
+      <Modal open={!!tmplList} onClose={() => setTmplList(null)} title={`Add card from template → ${tmplList?.name ?? ''}`} size="sm">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: space.sm }}>
+          {cardTemplatesQ.isLoading && <Skeleton height={36} />}
+          {(cardTemplatesQ.data ?? []).map((t) => (
+            <button key={t.id} onClick={() => useCardTemplate(t.id)}
+              style={{ textAlign: 'left', padding: '10px 12px', border: `1px solid ${color.border}`, borderRadius: radius.base, background: color.surface, cursor: 'pointer', fontSize: 14, color: color.text }}>
+              {t.title}
+            </button>
+          ))}
+          {cardTemplatesQ.data && cardTemplatesQ.data.length === 0 && (
+            <p style={{ fontSize: 13, color: color.textMuted, margin: 0 }}>No card templates. Open a card → "Save as template".</p>
           )}
         </div>
       </Modal>

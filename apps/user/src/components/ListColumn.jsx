@@ -5,7 +5,7 @@ import { CSS } from '@dnd-kit/utilities';
 import {
   Plus, MoreHorizontal, Pencil, Trash2, Archive, GripVertical,
   ArrowDownAZ, Calendar, Clock, ChevronRight, ChevronLeft, Copy, ArchiveX,
-  Gauge, ArrowRightLeft,
+  Gauge, ArrowRightLeft, LayoutTemplate,
 } from 'lucide-react';
 import {
   Button, Input, IconButton, Dropdown, MenuItem,
@@ -13,7 +13,7 @@ import {
 } from '@trello/ui';
 import { CardTile } from './CardTile';
 
-export function ListColumn({ list, cards, onAddCard, onCardClick, onRename, onDelete, onArchive, onSort, onCopy, onArchiveCards, onSetWip, onMove, selectMode = false, selectedIds, onToggleSelect, openComposer, onComposerHandled }) {
+export function ListColumn({ list, cards, onAddCard, onCardClick, onRename, onDelete, onArchive, onSort, onCopy, onArchiveCards, onSetWip, onMove, onAddFromTemplate, selectMode = false, selectedIds, onToggleSelect, openComposer, onComposerHandled }) {
   const overWip = list.wipLimit > 0 && cards.length > list.wipLimit;
   const [adding, setAdding] = useState(false);
   const [title, setTitle] = useState('');
@@ -102,6 +102,7 @@ export function ListColumn({ list, cards, onAddCard, onCardClick, onRename, onDe
           <MenuItem icon={<Pencil size={16} />} onClick={() => { setDraftName(list.name); setEditing(true); }}>Rename</MenuItem>
           {onCopy && <MenuItem icon={<Copy size={16} />} onClick={() => onCopy(list.id)}>Copy list</MenuItem>}
           {onMove && <MenuItem icon={<ArrowRightLeft size={16} />} onClick={() => onMove(list)}>Move to board…</MenuItem>}
+          {onAddFromTemplate && <MenuItem icon={<LayoutTemplate size={16} />} onClick={() => onAddFromTemplate(list)}>Add card from template…</MenuItem>}
           {onSetWip && <MenuItem icon={<Gauge size={16} />} onClick={() => onSetWip(list)}>Set WIP limit</MenuItem>}
           <MenuItem icon={<ChevronLeft size={16} />} onClick={() => setCollapsed(true)}>Collapse</MenuItem>
           {onSort && <MenuItem icon={<ArrowDownAZ size={16} />} onClick={() => onSort(list.id, 'name')}>Sort by name</MenuItem>}

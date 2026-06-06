@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Upload, Trash2 } from 'lucide-react';
 import {
-  useAuth, Button, Input, Card, Avatar, Skeleton, useConfirm,
+  useAuth, Button, Input, Textarea, Card, Avatar, Skeleton, useConfirm,
   color, font, space,
 } from '@trello/ui';
 import { meUser } from '../lib/me';
@@ -25,15 +25,22 @@ export function Profile() {
   const deleteAccount = useDeleteAccount();
 
   const [name, setName] = useState('');
+  const [bio, setBio] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
 
   useEffect(() => { setName(me?.name ?? ''); }, [me?.name]);
+  useEffect(() => { setBio(me?.bio ?? ''); }, [me?.bio]);
 
   const saveName = () => {
     const n = name.trim();
     if (!n || n === me?.name) return;
     updateProfile.mutate({ name: n }, { onSuccess: () => refresh() });
+  };
+
+  const saveBio = () => {
+    if (bio === (me?.bio ?? '')) return;
+    updateProfile.mutate({ bio: bio.trim() || null }, { onSuccess: () => refresh() });
   };
 
   const onAvatarPick = (e) => {
@@ -104,6 +111,11 @@ export function Profile() {
         </div>
 
         <Input label="Email" value={me.email ?? ''} readOnly helper="Email cannot be changed." />
+
+        <Textarea label="Bio" value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Tell people a bit about yourself…" style={{ minHeight: 80 }} maxLength={500} />
+        <div>
+          <Button variant="secondary" size="sm" onClick={saveBio} loading={updateProfile.isPending} disabled={bio === (me.bio ?? '')}>Save bio</Button>
+        </div>
       </Card>
 
       <Card style={{ display: 'flex', flexDirection: 'column', gap: space.base }}>

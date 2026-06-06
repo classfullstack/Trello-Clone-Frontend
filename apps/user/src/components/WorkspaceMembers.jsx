@@ -4,7 +4,7 @@ import axios from 'axios';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { UserPlus, Search, Link as LinkIcon, Copy, Trash2, UploadCloud } from 'lucide-react';
 import {
-  Modal, Button, Select, Avatar, Badge, Spinner, useToast,
+  Modal, Button, Select, Avatar, Badge, Spinner, IconButton, useToast,
   color, font, space, radius, shadow, focusRing,
 } from '@trello/ui';
 import { api } from '../lib/api';
@@ -302,6 +302,17 @@ export function WorkspaceMembers({ workspaceId, open, onClose }) {
     onError: (e) => toast.error(e.response?.data?.message || 'Could not invite. Check the email exists.'),
   });
 
+  const changeRole = useMutation({
+    mutationFn: ({ userId, role }) => api.patch(`/workspaces/${workspaceId}/members/${userId}`, { role }),
+    onSuccess: () => { toast.success('Role updated.'); qc.invalidateQueries({ queryKey: ['ws-members', workspaceId] }); },
+    onError: (e) => toast.error(e.response?.data?.message || 'Could not update role.'),
+  });
+  const removeMember = useMutation({
+    mutationFn: (userId) => api.delete(`/workspaces/${workspaceId}/members/${userId}`),
+    onSuccess: () => { toast.success('Member removed.'); qc.invalidateQueries({ queryKey: ['ws-members', workspaceId] }); },
+    onError: (e) => toast.error(e.response?.data?.message || 'Could not remove member.'),
+  });
+
   const onInvite = (e) => {
     e.preventDefault();
     const v = email.trim();
@@ -338,7 +349,16 @@ export function WorkspaceMembers({ workspaceId, open, onClose }) {
               <div style={{ fontSize: 15, color: color.text, fontWeight: 600 }}>{m.name || m.email}</div>
               <div style={{ fontSize: 13, color: color.textMuted }}>{m.email}</div>
             </div>
-            <Badge kind={m.role === 'ws_owner' ? 'primary' : 'default'}>{(m.role || 'member').replace('ws_', '')}</Badge>
+            {m.role === 'ws_owner' ? (
+              <Badge kind="primary">owner</Badge>
+            ) : (
+              <>
+                <Select value={m.role} onChange={(e) => changeRole.mutate({ userId: m.userId, role: e.target.value })} style={{ minHeight: 34, width: 120 }}>
+                  {ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+                </Select>
+                <IconButton label="Remove member" onClick={() => removeMember.mutate(m.userId)}><Trash2 size={16} /></IconButton>
+              </>
+            )}
           </div>
         ))}
         {!membersQ.isLoading && members.length === 0 && (
