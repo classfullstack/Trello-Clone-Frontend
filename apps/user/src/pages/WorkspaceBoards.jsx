@@ -32,6 +32,13 @@ export function WorkspaceBoards() {
     enabled: !!workspaceId,
   });
 
+  const wsQ = useQuery({
+    queryKey: ['ws-detail', workspaceId],
+    queryFn: async () => (await api.get(`/workspaces/${workspaceId}`)).data,
+    enabled: !!workspaceId,
+  });
+  const ws = wsQ.data;
+
   const create = useCreateBoard(workspaceId);
   const update = useUpdateBoard(workspaceId);
   const remove = useDeleteBoard(workspaceId);
@@ -78,7 +85,12 @@ export function WorkspaceBoards() {
         <ArrowLeft size={16} /> Workspaces
       </Link>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: space.base, flexWrap: 'wrap' }}>
-        <h1 style={{ fontFamily: font.display, fontSize: 30, fontWeight: 800, color: color.text, letterSpacing: '-0.5px' }}>Boards</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: space.md, minWidth: 0 }}>
+          {ws?.logoUrl
+            ? <img src={ws.logoUrl} alt="" style={{ width: 44, height: 44, borderRadius: radius.large, objectFit: 'cover', border: `1px solid ${color.border}` }} />
+            : <div style={{ width: 44, height: 44, borderRadius: radius.large, background: color.surfaceAlt, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: color.textMuted, fontSize: 18 }}>{(ws?.name ?? 'W')[0]?.toUpperCase()}</div>}
+          <h1 style={{ fontFamily: font.display, fontSize: 30, fontWeight: 800, color: color.text, letterSpacing: '-0.5px', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ws?.name ?? 'Boards'}</h1>
+        </div>
         <Button variant="secondary" leftIcon={<Users size={16} />} onClick={() => setMembersOpen(true)}>Members</Button>
       </div>
       <WorkspaceMembers workspaceId={workspaceId} open={membersOpen} onClose={() => setMembersOpen(false)} />

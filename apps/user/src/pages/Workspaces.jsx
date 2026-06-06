@@ -201,7 +201,7 @@ function WorkspaceCard({ ws, grad, onOpen, onRename, onDelete }) {
       >
         <div style={{ height: 88, background: grad }} />
         <div style={{ padding: space.lg, display: 'flex', alignItems: 'center', gap: space.md }}>
-          <Avatar name={ws.name} size={52} style={{ borderRadius: radius.large, marginTop: -44, border: `3px solid ${color.surface}` }} />
+          <Avatar name={ws.name} src={ws.logoUrl} size={52} style={{ borderRadius: radius.large, marginTop: -44, border: `3px solid ${color.surface}` }} />
           <div style={{ minWidth: 0 }}>
             <div style={{ fontFamily: font.display, fontSize: 18, fontWeight: 700, color: color.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {ws.name}
