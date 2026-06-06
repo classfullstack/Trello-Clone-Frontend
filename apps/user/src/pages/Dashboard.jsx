@@ -41,6 +41,58 @@ function Bars({ data, max }) {
   );
 }
 
+const STATUS_META = [
+  { key: 'todo', label: 'To do', c: '#8590A2' },
+  { key: 'doing', label: 'In progress', c: '#1868DB' },
+  { key: 'done', label: 'Done', c: '#4BCE97' },
+  { key: 'blocked', label: 'Blocked', c: '#F87168' },
+  { key: 'none', label: 'No status', c: '#C1C7D0' },
+];
+
+function Donut({ segments, total }) {
+  let acc = 0;
+  const stops = segments.filter((s) => s.value > 0).map((s) => {
+    const start = total ? (acc / total) * 360 : 0;
+    acc += s.value;
+    const end = total ? (acc / total) * 360 : 0;
+    return `${s.c} ${start}deg ${end}deg`;
+  });
+  const bg = stops.length ? `conic-gradient(${stops.join(', ')})` : color.surfaceAlt;
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: space.lg, flexWrap: 'wrap' }}>
+      <div style={{ width: 130, height: 130, borderRadius: '50%', background: bg, flexShrink: 0, position: 'relative' }}>
+        <div style={{ position: 'absolute', inset: 26, borderRadius: '50%', background: color.surface, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
+          <span style={{ fontFamily: font.display, fontSize: 24, fontWeight: 800, color: color.text }}>{total}</span>
+          <span style={{ fontSize: 11, color: color.textMuted }}>cards</span>
+        </div>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {segments.map((s) => (
+          <div key={s.key} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: color.textMuted }}>
+            <span style={{ width: 10, height: 10, borderRadius: 3, background: s.c, flexShrink: 0 }} />
+            <span style={{ color: color.text, fontWeight: 600, width: 24 }}>{s.value}</span>{s.label}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function VBars({ data }) {
+  const max = Math.max(1, ...data.map((d) => d.value));
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: space.sm, height: 140, paddingTop: space.sm }}>
+      {data.map((d, i) => (
+        <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, height: '100%', justifyContent: 'flex-end' }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: color.text }}>{d.value}</span>
+          <div style={{ width: '100%', maxWidth: 44, height: `${Math.max(4, (d.value / max) * 100)}%`, background: '#4BCE97', borderRadius: `${radius.base} ${radius.base} 0 0`, transition: 'height .3s', minHeight: 4 }} />
+          <span style={{ fontSize: 11, color: color.textMuted }}>{d.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function Dashboard() {
   const { data, isLoading, isError } = useDashboard();
 
@@ -68,6 +120,22 @@ export function Dashboard() {
         <h2 style={{ fontFamily: font.display, fontSize: 18, fontWeight: 600, color: color.text, margin: 0 }}>Cards by due date</h2>
         <Bars data={buckets} max={bucketMax} />
       </Card>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: space.lg }}>
+        <Card style={{ display: 'flex', flexDirection: 'column', gap: space.base }}>
+          <h2 style={{ fontFamily: font.display, fontSize: 18, fontWeight: 600, color: color.text, margin: 0 }}>Phân bố trạng thái</h2>
+          <Donut
+            segments={STATUS_META.map((s) => ({ ...s, value: data.byStatus?.[s.key] ?? 0 }))}
+            total={STATUS_META.reduce((n, s) => n + (data.byStatus?.[s.key] ?? 0), 0)}
+          />
+        </Card>
+        <Card style={{ display: 'flex', flexDirection: 'column', gap: space.base }}>
+          <h2 style={{ fontFamily: font.display, fontSize: 18, fontWeight: 600, color: color.text, margin: 0 }}>Velocity (hoàn thành / tuần)</h2>
+          {(data.velocity ?? []).some((v) => v.value > 0)
+            ? <VBars data={data.velocity} />
+            : <div style={{ fontSize: 13, color: color.textMuted }}>Chưa có card hoàn thành trong 6 tuần qua.</div>}
+        </Card>
+      </div>
 
       <Card style={{ display: 'flex', flexDirection: 'column', gap: space.base }}>
         <h2 style={{ fontFamily: font.display, fontSize: 18, fontWeight: 600, color: color.text, margin: 0 }}>Cards by board</h2>

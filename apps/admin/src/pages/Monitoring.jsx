@@ -167,6 +167,28 @@ export function MonitoringPage() {
             </Card>
           </div>
 
+          {(data?.queues ?? []).length > 0 && (
+            <>
+              <h2 style={{ fontFamily: font.display, fontSize: 16, fontWeight: 700, color: color.text, marginBottom: space.md }}>Background queues</h2>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: space.base, marginBottom: space.lg }}>
+                {data.queues.map((q) => (
+                  <Card key={q.name} style={{ padding: space.base }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: space.sm }}>
+                      <span style={{ fontWeight: 700, color: color.text, fontSize: 14, textTransform: 'capitalize' }}>{q.name}</span>
+                      {q.failed > 0 ? <Badge kind="error">{q.failed} failed</Badge> : <Badge kind="success">healthy</Badge>}
+                    </div>
+                    <div style={{ display: 'flex', gap: space.base, flexWrap: 'wrap', fontSize: 12, color: color.textMuted }}>
+                      <span><strong style={{ color: color.text }}>{q.active ?? 0}</strong> active</span>
+                      <span><strong style={{ color: color.text }}>{q.waiting ?? 0}</strong> waiting</span>
+                      <span><strong style={{ color: color.text }}>{q.delayed ?? 0}</strong> delayed</span>
+                      <span><strong style={{ color: color.text }}>{q.completed ?? 0}</strong> done</span>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </>
+          )}
+
           <h2 style={{ fontFamily: font.display, fontSize: 16, fontWeight: 700, color: color.text, marginBottom: space.md }}>Totals</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: space.base }}>
             {COUNTS.map((c) => <CountTile key={c.key} Icon={c.Icon} label={c.label} value={counts[c.key]} />)}
