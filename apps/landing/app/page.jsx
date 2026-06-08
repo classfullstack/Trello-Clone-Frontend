@@ -144,6 +144,28 @@ export default async function Home() {
           </div>
         </section>
 
+        {/* Zalo chatbot */}
+        <section id="chatbot" className="section" style={{ background: color.offWhite }}>
+          <div className="container">
+            <div className="section-head">
+              <h2>Hỏi đáp nhanh với Trợ lý AI trên Zalo</h2>
+              <p>Quét mã QR để chat với bot — hỏi mọi thông tin về sản phẩm, nhận trả lời tức thì 24/7.</p>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <div style={{
+                background: '#fff', borderRadius: 16, padding: 24, textAlign: 'center',
+                boxShadow: '0 8px 24px rgba(9,30,66,0.12)', maxWidth: 320,
+              }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/zalo-bot-qr.jpg" alt="QR chat bot Zalo" width={260} height={260}
+                  style={{ width: 260, height: 260, objectFit: 'contain', borderRadius: 12 }} />
+                <p style={{ margin: '14px 0 0', fontWeight: 700, color: color.navyMedium }}>Bot Code Web Không Khó</p>
+                <p style={{ margin: '4px 0 0', fontSize: 14, color: color.navyLight }}>Mở Zalo → quét QR để bắt đầu chat</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* Final CTA */}
         <section className="section">
           <div className="container">
