@@ -3,6 +3,13 @@ import { color } from './tokens';
 // Hardcoded fallback content. Used when the CMS API is unavailable or a field is missing.
 export const DEFAULTS = {
   brand: { name: 'Trello Clone' },
+  chatbot: {
+    enabled: true,
+    title: 'Hỏi đáp nhanh với Trợ lý AI trên Zalo',
+    subtitle: 'Quét mã QR để chat với bot — trả lời tức thì 24/7.',
+    botName: 'Bot Code Web Không Khó',
+    qrImage: '',
+  },
   hero: {
     eyebrow: 'Free to start · No credit card',
     title: 'Organize anything, together.',

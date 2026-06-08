@@ -8,7 +8,7 @@ import {
 import {
   Megaphone, Tag, Sparkles, ShieldCheck, LayoutGrid, ListOrdered, CreditCard,
   HelpCircle, PanelBottom, Plus, Trash2, ArrowUp, ArrowDown, Upload, X, Image as ImageIcon,
-  AlertTriangle,
+  AlertTriangle, QrCode,
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { PageHeader } from '../components/Layout';
@@ -16,6 +16,7 @@ import { FormSkeleton } from '../components/PageSkeleton';
 
 const EMPTY = {
   brand: { name: '' },
+  chatbot: { enabled: true, title: '', subtitle: '', botName: '', qrImage: '' },
   hero: { eyebrow: '', title: '', subtitle: '', primaryCtaLabel: '', secondaryCtaLabel: '', image: '' },
   trust: { logos: [] },
   features: [],
@@ -30,6 +31,7 @@ function normalize(c) {
   if (!c) return EMPTY;
   return {
     brand: { ...EMPTY.brand, ...(c.brand ?? {}) },
+    chatbot: { ...EMPTY.chatbot, ...(c.chatbot ?? {}) },
     hero: { ...EMPTY.hero, ...(c.hero ?? {}) },
     trust: { logos: Array.isArray(c.trust?.logos) ? c.trust.logos : [] },
     features: Array.isArray(c.features) ? c.features : [],
@@ -241,6 +243,7 @@ export function LandingPage() {
   const patch = (updater) => { setForm(updater); setDirty(true); };
   const setBrand = (k, v) => patch((f) => ({ ...f, brand: { ...f.brand, [k]: v } }));
   const setHero = (k, v) => patch((f) => ({ ...f, hero: { ...f.hero, [k]: v } }));
+  const setChatbot = (k, v) => patch((f) => ({ ...f, chatbot: { ...f.chatbot, [k]: v } }));
   const setFooter = (k, v) => patch((f) => ({ ...f, footer: { ...f.footer, [k]: v } }));
   const setList = (k, v) => patch((f) => ({ ...f, [k]: v }));
 
@@ -304,6 +307,19 @@ export function LandingPage() {
             <div>
               <span style={{ fontSize: 13, fontWeight: 600, color: color.darkGray, display: 'block', marginBottom: space.sm }}>Hero image</span>
               <ImageUploadField value={f.hero.image} onChange={(v) => setHero('image', v)} />
+            </div>
+          </div>
+        </SectionCard>
+
+        <SectionCard Icon={QrCode} title="Chatbot Zalo" description="Khối QR chat bot trên landing. Upload ảnh QR, sửa tiêu đề / tên bot, hoặc ẩn đi."
+          action={<Toggle checked={f.chatbot.enabled !== false} onChange={(v) => setChatbot('enabled', v)} label="Hiện" />}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: space.base }}>
+            <Input label="Tiêu đề" value={f.chatbot.title} onChange={(e) => setChatbot('title', e.target.value)} placeholder="Hỏi đáp nhanh với Trợ lý AI trên Zalo" />
+            <Textarea label="Mô tả" value={f.chatbot.subtitle} onChange={(e) => setChatbot('subtitle', e.target.value)} placeholder="Quét mã QR để chat với bot…" />
+            <Input label="Tên bot" value={f.chatbot.botName} onChange={(e) => setChatbot('botName', e.target.value)} placeholder="Bot Code Web Không Khó" />
+            <div>
+              <span style={{ fontSize: 13, fontWeight: 600, color: color.darkGray, display: 'block', marginBottom: space.sm }}>Ảnh QR (để trống = dùng ảnh mặc định)</span>
+              <ImageUploadField value={f.chatbot.qrImage} onChange={(v) => setChatbot('qrImage', v)} />
             </div>
           </div>
         </SectionCard>
