@@ -165,9 +165,19 @@ export function Input({ label, error, helper, id, style, wrapStyle, ...rest }) {
           boxShadow: focused ? focusRing : 'none', transition: 'border-color .12s, box-shadow .12s',
           ...style,
         }}
-        onFocus={(e) => { setFocused(true); rest.onFocus?.(e); }}
-        onBlur={(e) => { setFocused(false); rest.onBlur?.(e); }}
         {...rest}
+        onFocus={(e) => { setFocused(true); rest.onFocus?.(e); }}
+        onBlur={(e) => {
+          setFocused(false);
+          // Auto-clean: trim leading/trailing whitespace on blur (skip passwords).
+          if (rest.onChange && typeof rest.value === 'string' && rest.type !== 'password') {
+            const trimmed = rest.value.trim();
+            if (trimmed !== rest.value) {
+              rest.onChange({ ...e, target: { ...e.target, value: trimmed } });
+            }
+          }
+          rest.onBlur?.(e);
+        }}
       />
       {error ? (
         <span style={{ fontFamily: font.text, fontSize: 12, color: color.danger }}>{error}</span>
@@ -201,9 +211,19 @@ export function Textarea({ label, error, helper, id, style, wrapStyle, ...rest }
           resize: 'vertical', boxShadow: focused ? focusRing : 'none',
           transition: 'border-color .12s, box-shadow .12s', ...style,
         }}
-        onFocus={(e) => { setFocused(true); rest.onFocus?.(e); }}
-        onBlur={(e) => { setFocused(false); rest.onBlur?.(e); }}
         {...rest}
+        onFocus={(e) => { setFocused(true); rest.onFocus?.(e); }}
+        onBlur={(e) => {
+          setFocused(false);
+          // Auto-clean: trim leading/trailing whitespace on blur (skip passwords).
+          if (rest.onChange && typeof rest.value === 'string' && rest.type !== 'password') {
+            const trimmed = rest.value.trim();
+            if (trimmed !== rest.value) {
+              rest.onChange({ ...e, target: { ...e.target, value: trimmed } });
+            }
+          }
+          rest.onBlur?.(e);
+        }}
       />
       {error && <span style={{ fontFamily: font.text, fontSize: 12, color: color.danger }}>{error}</span>}
       {!error && helper && <span style={{ fontFamily: font.text, fontSize: 12, color: color.navyLight }}>{helper}</span>}
