@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Link, useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors, closestCorners,
@@ -133,6 +133,8 @@ export function BoardView() {
   const [renameOpen, setRenameOpen] = useState(false);
   const [boardName, setBoardName] = useState('');
   const [bgOpen, setBgOpen] = useState(false);
+  const [bgUploading, setBgUploading] = useState(false);
+  const bgFileRef = useRef(null);
   const [descOpen, setDescOpen] = useState(false);
   const [boardDesc, setBoardDesc] = useState('');
   const [labelsOpen, setLabelsOpen] = useState(false);
@@ -354,6 +356,20 @@ export function BoardView() {
     });
   };
   const pickBg = (bg) => updateBoard.mutate({ id: boardId, patch: { background: bg } }, { onSuccess: () => setBgOpen(false) });
+  const onPickBgImage = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) return;
+    setBgUploading(true);
+    try {
+      const { data } = await api.post(`/boards/${boardId}/background-image`, { filename: file.name, contentType: file.type });
+      await fetch(data.uploadUrl, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
+      pickBg(`url("${data.fileUrl}") center / cover no-repeat`);
+    } finally {
+      setBgUploading(false);
+    }
+  };
   const submitBoardDesc = (e) => {
     e.preventDefault();
     updateBoard.mutate({ id: boardId, patch: { description: boardDesc.trim() || null } }, { onSuccess: () => setDescOpen(false) });
@@ -564,6 +580,16 @@ export function BoardView() {
               aria-label="Pick background" />
           ))}
         </div>
+        <div style={{ marginTop: space.base, display: 'flex', alignItems: 'center', gap: space.sm }}>
+          <Button variant="secondary" leftIcon={<Image size={16} />} loading={bgUploading} onClick={() => bgFileRef.current?.click()}>
+            Tải ảnh của bạn
+          </Button>
+          {board?.background?.startsWith('url(') && (
+            <Button variant="ghost" onClick={() => pickBg(boardBackgrounds[0])}>Bỏ ảnh</Button>
+          )}
+          <input ref={bgFileRef} type="file" accept="image/*" onChange={onPickBgImage} style={{ display: 'none' }} />
+        </div>
+        <p style={{ marginTop: space.sm, fontSize: 12, color: color.textMuted }}>PNG/JPG. Ảnh sẽ phủ kín nền board.</p>
       </Modal>
 
       <Modal open={!!moveListTarget} onClose={() => setMoveListTarget(null)} title={`Move "${moveListTarget?.name ?? ''}" to board`} size="sm">
